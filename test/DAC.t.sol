@@ -33,18 +33,14 @@ contract DACTest is Test {
         contrib_comp_pct = 5;
         sponsor_comp_pct = 10;
 
-        console.log(sponsor_comp_pct);
-        console.log(sponsor_comp_pct / 100);
-        console.log('total goal:', goal * (1 + (sponsor_comp_pct / 100)));
-
         DACFactory factory = new DACFactory();
         vm.prank(sponsor);
-        dac = factory.createDAC{ value: goal * contrib_comp_pct / 100 }(arbitrator, deadline, goal, contrib_comp_pct, sponsor_comp_pct);
+        dac = factory.createDAC{ value: (goal * (100 + contrib_comp_pct) * 1e18) / (100 * 1e18) }(arbitrator, deadline, goal, contrib_comp_pct, sponsor_comp_pct);
     }
 
     function testContribute() public {
       vm.startPrank(contributor1);
-      uint256 amount1 = 300;
+      uint256 amount1 = 200;
       dac.contribute{ value: amount1 }();
       vm.stopPrank();
 

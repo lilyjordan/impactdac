@@ -1,8 +1,5 @@
 pragma solidity ^0.8.4;
 
-import "@openzeppelin/contracts/math/SafeMath.sol";
-
-using SafeMath for uint256;
 
 contract DAC {
     address payable public sponsor;
@@ -40,7 +37,7 @@ contract DAC {
         require(block.timestamp < deadline, "Deadline passed");
 
         uint256 potentialTotal = totalContributions + msg.value;
-        uint256 goalPlusSponsorComp =  goal.mul(100.add(sponsor_comp_pct)).div(100);
+        uint256 goalPlusSponsorComp =  (goal * (100 + sponsor_comp_pct) * 1e18) / (100 * 1e18);
 
         if (potentialTotal > goalPlusSponsorComp) {
             revert("Contribution would exceed goal");
@@ -94,8 +91,8 @@ contract DACFactory {
         uint256 _contrib_comp_pct,
         uint256 _sponsor_comp_pct
     ) public payable returns (DAC) {
-        require(msg.value >= _goal.mul(100.add(_contrib_comp_pct)).div(100), "Insufficient sponsor fund");
-        require(msg.value <= _goal.mul(100.add(_contrib_comp_pct)).div(100), "Overfunded");  // TODO say how much is needed (for both of these)
+        require(msg.value >= (_goal * (100 + _contrib_comp_pct) * 1e18) / (100 * 1e18), "Insufficient sponsor fund");
+        require(msg.value <= (_goal * (100 + _contrib_comp_pct) * 1e18) / (100 * 1e18), "Overfunded");  // TODO say how much is needed (for both of these)
         DAC dac = new DAC(payable(msg.sender), _arbitrator, _deadline, _goal, _contrib_comp_pct, _sponsor_comp_pct);
         contracts.push(dac);
         return dac;
