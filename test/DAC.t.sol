@@ -57,19 +57,27 @@ contract DACTest is Test {
     }
 
     function testApprovePayout() public {
-        console.log('before:', contributor1.balance);
+        uint256 contribBalanceInitial = contributor1.balance;
+        uint256 sponsorBalanceInitial = sponsor.balance;
+        uint256 founderBalanceInitial = founder.balance;
+
+        uint256 sponsorComp = goal * (sponsor_comp_pct * 1e18) / (100 * 1e18);
+
         vm.startPrank(contributor1);
-        dac.contribute{ value: 1100 }();
+        // We'll just have this contributor fully fund the project
+        dac.contribute{ value: goal + sponsorComp }();
         vm.stopPrank;
+        uint256 contribBalanceAfterContrib = contributor1.balance;
+        assertEq(contribBalanceAfterContrib, contribBalanceInitial - (goal + sponsorComp));
 
         vm.prank(arbitrator);
         dac.approvePayout(founder);
-        console.log(sponsor.balance);
-        console.log(founder.balance);
-        console.log(contributor1.balance);
-        console.log(contributor2.balance);
-        // TODO check that sponsor has same balance
-        // TODO check that contributors have same balance
-        // TODO check that founder gets the transfer
+        uint256 contribBalanceFinal = contributor1.balance;
+        uint256 sponsorBalanceFinal = sponsor.balance;
+        uint256 founderBalanceFinal = founder.balance;
+        
+        assertEq(contribBalanceFinal, contribBalanceInitial - (goal + sponsorComp));
+        assertEq(sponsorBalanceFinal, sponsorBalanceInitial + sponsorComp);
+        assertEq(founderBalanceFinal, founderBalanceInitial + goal);
     }
 }

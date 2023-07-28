@@ -53,8 +53,9 @@ contract DAC {
         require(msg.sender == arbitrator, "Only arbitrator can authorize payout");
         require(state == State.Funded, "Not funded");
         state = State.Approved;
-        founder.transfer(address(this).balance);  // Whole function reverts if this fails
-        // TODO pay back the potential interest the sponsor put in
+        // Pay back the sponsor's contribution
+        sponsor.transfer((goal * sponsor_comp_pct * 1e18) / (100 * 1e18));
+        founder.transfer(goal);  // Whole function reverts if this fails
     }
 
     function rejectPayout() public {
