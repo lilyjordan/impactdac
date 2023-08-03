@@ -2,7 +2,6 @@ pragma solidity ^0.8.4;
 import "forge-std/Test.sol";
 
 
-
 contract DAC {
     address payable public sponsor;
     address public arbitrator;
@@ -108,7 +107,7 @@ contract DACFactory {
         uint256 _sponsorCompPct
     ) public payable returns (DAC) {
         require(msg.value >= (_goal * (100 + _contribCompPct) * 1e18) / (100 * 1e18), "Insufficient sponsor fund");
-        require(msg.value <= (_goal * (100 + _contribCompPct) * 1e18) / (100 * 1e18), "Overfunded");  // TODO say how much is needed (for both of these)
+        require(msg.value <= (_goal * (100 + _contribCompPct) * 1e18) / (100 * 1e18), "Overfunded");
         DAC dac = new DAC(payable(msg.sender), _arbitrator, _deadline, _goal, _contribCompPct, _sponsorCompPct);
         return dac;
     }
