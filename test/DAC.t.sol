@@ -13,8 +13,8 @@ contract DACTest is Test {
     address public arbitrator;
     uint256 public deadline;
     uint256 public goal;
-    uint256 public contrib_comp_pct;
-    uint256 public sponsor_comp_pct;
+    uint256 public contribCompPct;
+    uint256 public sponsorCompPct;
 
     uint256 public STATE_FUNDING = 0;
     uint256 public STATE_FUNDED = 1;
@@ -34,39 +34,38 @@ contract DACTest is Test {
         arbitrator = vm.addr(6);
         deadline = 1687669795;  // Unix timestamp, 6/25/2023
         goal = 1000;
-        contrib_comp_pct = 5;
-        sponsor_comp_pct = 10;
+        contribCompPct = 5;
+        sponsorCompPct = 10;
 
         DACFactory factory = new DACFactory();
         vm.prank(sponsor);
-        dac = factory.createDAC{ value: (goal * (100 + contrib_comp_pct) * 1e18) / (100 * 1e18) }(arbitrator, deadline, goal, contrib_comp_pct, sponsor_comp_pct);
+        dac = factory.createDAC{ value: (goal * (100 + contribCompPct) * 1e18) / (100 * 1e18) }(arbitrator, deadline, goal, contribCompPct, sponsorCompPct);
     }
 
     function testContribute() public {
-      uint256 balanceInitial1 = contributors[0].balance;
-      uint256 balanceInitial2 = contributors[1].balance;
-      uint256 balanceInitial3 = contributors[2].balance;
-      console.log(balanceInitial1);
+      uint256 balanceInitial0 = contributors[0].balance;
+      uint256 balanceInitial1 = contributors[1].balance;
+      uint256 balanceInitial2 = contributors[2].balance;
 
       vm.startPrank(contributors[0]);
-      uint256 amount1 = 200;
-      dac.contribute{ value: amount1 }();
+      uint256 amount0 = 200;
+      dac.contribute{ value: amount0 }();
       vm.stopPrank();
 
       vm.startPrank(contributors[1]);
-      uint256 amount2 = 400;
-      dac.contribute{ value: amount2 }();
+      uint256 amount1 = 400;
+      dac.contribute{ value: amount1 }();
       vm.stopPrank();
 
       vm.startPrank(contributors[2]);
-      uint256 amount3 = 500;
-      dac.contribute{ value: amount3 }();
+      uint256 amount2 = 500;
+      dac.contribute{ value: amount2 }();
       vm.stopPrank();
 
       assertEq(address(dac).balance, 1100);
-      assertEq(contributors[0].balance, balanceInitial1 - amount1);
-      assertEq(contributors[1].balance, balanceInitial2 - amount2);
-      assertEq(contributors[2].balance, balanceInitial3 - amount3);
+      assertEq(contributors[0].balance, balanceInitial0 - amount0);
+      assertEq(contributors[1].balance, balanceInitial1 - amount1);
+      assertEq(contributors[2].balance, balanceInitial2 - amount2);
       assertEq(uint(dac.state()), STATE_FUNDED);
     }
     
@@ -76,23 +75,69 @@ contract DACTest is Test {
         uint256 sponsorBalanceInitial = sponsor.balance;
         uint256 founderBalanceInitial = founder.balance;
 
-        uint256 sponsorComp = goal * (sponsor_comp_pct * 1e18) / (100 * 1e18);
+        uint256 sponsorComp = goal * (sponsorCompPct * 1e18) / (100 * 1e18);
 
         vm.startPrank(contributors[0]);
         // We'll just have this contributor fully fund the project
         dac.contribute{ value: goal + sponsorComp }();
         vm.stopPrank;
-        uint256 contribBalanceAfterContrib = contributors[0].balance;
-        assertEq(contribBalanceAfterContrib, contribBalanceInitial - (goal + sponsorComp));
 
+        // Contributor should have spent the money
+        assertEq(contributors[0].balance, contribBalanceInitial - (goal + sponsorComp));
+
+        // Approve the payout
         vm.prank(arbitrator);
         dac.approvePayout(founder);
-        uint256 contribBalanceFinal = contributors[0].balance;
-        uint256 sponsorBalanceFinal = sponsor.balance;
-        uint256 founderBalanceFinal = founder.balance;
         
-        assertEq(contribBalanceFinal, contribBalanceInitial - (goal + sponsorComp));
-        assertEq(sponsorBalanceFinal, sponsorBalanceInitial + sponsorComp);
-        assertEq(founderBalanceFinal, founderBalanceInitial + goal);
+        // Everyone should have the right balances at the end
+        assertEq(contributors[0].balance, contribBalanceInitial - (goal + sponsorComp));
+        assertEq(sponsor.balance, sponsorBalanceInitial + sponsorComp);
+        assertEq(founder.balance, founderBalanceInitial + goal);
+    }
+
+    function testRefund() public {
+        uint256 contributorBalanceInitial0 = contributors[0].balance;
+        uint256 contributorBalanceInitial1 = contributors[1].balance;
+        uint256 contributorBalanceInitial2 = contributors[2].balance;
+
+        uint256 amount0 = 200;
+        uint256 amount1 = 300;
+        uint256 amount2 = 500;
+
+        vm.prank(contributors[0]);
+        dac.contribute{ value: amount0 }();
+
+        vm.prank(contributors[1]);
+        dac.contribute{ value: amount1 }();
+
+        vm.prank(contributors[2]);
+        dac.contribute{ value: amount2 }();
+
+        // Pretend the deadline has passed now
+        vm.warp(deadline + 1);
+
+        // Attempt refund
+        vm.prank(contributors[0]);
+        dac.refund();
+
+        vm.prank(contributors[1]);
+        dac.refund();
+
+        vm.prank(contributors[2]);
+        dac.refund();
+
+        assertEq(uint(dac.state()), STATE_FAILED);
+
+        // Each contributor should have been refunded their original contribution plus the bonus from the sponsor
+        uint256 amountRefunded0 = amount0 * (1 + (contribCompPct * 1e18) / (100 * 1e18));
+        uint256 amountRefunded1 = amount1 * (1 + (contribCompPct * 1e18) / (100 * 1e18));
+        uint256 amountRefunded2 = amount2 * (1 + (contribCompPct * 1e18) / (100 * 1e18));
+
+        assertEq(contributors[0].balance, contributorBalanceInitial0 - amount0 + amountRefunded0);
+        assertEq(contributors[1].balance, contributorBalanceInitial1 - amount1 + amountRefunded1);
+        assertEq(contributors[2].balance, contributorBalanceInitial2 - amount2 + amountRefunded2);
+    }
+    function testGetContracts() public {
+
     }
 }

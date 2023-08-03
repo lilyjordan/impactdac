@@ -1,4 +1,6 @@
 pragma solidity ^0.8.4;
+import "forge-std/Test.sol";
+
 
 
 contract DAC {
@@ -6,8 +8,8 @@ contract DAC {
     address public arbitrator;
     uint256 public deadline;
     uint256 public goal;
-    uint256 public contrib_comp_pct;
-    uint256 public sponsor_comp_pct;
+    uint256 public contribCompPct;
+    uint256 public sponsorCompPct;
 
     mapping(address => uint256) public contributions;
     uint256 public totalContributions;
@@ -20,15 +22,15 @@ contract DAC {
         address _arbitrator,
         uint256 _deadline,
         uint256 _goal,
-        uint256 _contrib_comp_pct,
-        uint256 _sponsor_comp_pct
+        uint256 _contribCompPct,
+        uint256 _sponsorCompPct
     ) {
         sponsor = _sponsor;
         arbitrator = _arbitrator;
         deadline = _deadline;
         goal = _goal;
-        contrib_comp_pct = _contrib_comp_pct;
-        sponsor_comp_pct = _sponsor_comp_pct;
+        contribCompPct = _contribCompPct;
+        sponsorCompPct = _sponsorCompPct;
         state = State.Funding;
     }
 
@@ -37,7 +39,7 @@ contract DAC {
         require(block.timestamp < deadline, "Deadline passed");
 
         uint256 potentialTotal = totalContributions + msg.value;
-        uint256 goalPlusSponsorComp =  (goal * (100 + sponsor_comp_pct) * 1e18) / (100 * 1e18);
+        uint256 goalPlusSponsorComp =  (goal * (100 + sponsorCompPct) * 1e18) / (100 * 1e18);
 
         if (potentialTotal > goalPlusSponsorComp) {
             revert("Contribution would exceed goal");
@@ -54,32 +56,43 @@ contract DAC {
         require(state == State.Funded, "Not funded");
         state = State.Approved;
         // Pay back the sponsor's contribution
-        sponsor.transfer((goal * sponsor_comp_pct * 1e18) / (100 * 1e18));
+        sponsor.transfer((goal * sponsorCompPct * 1e18) / (100 * 1e18));
         founder.transfer(goal);  // Whole function reverts if this fails
     }
 
-    function rejectPayout() public {
-        require(msg.sender == arbitrator, "Only arbitrator can authorize payout");
-        require(state == State.Funded, "Not funded");
-        require(block.timestamp >= deadline, "Deadline not passed");
-        state = State.Failed;
-    }
+    function checkFailure() internal {
+        if (state == State.Funding && block.timestamp > deadline) {
+            state = State.Failed;
+        }
 
-    function checkFailure() public {
-        require(state == State.Funding, "Not in funding state");
-        require(block.timestamp >= deadline, "Deadline not passed");
-        state = State.Failed;
     }
 
     function refund() public {
-        require(state == State.Failed, "Not in failure state");
-        uint256 amount = contributions[msg.sender] * (1 + contrib_comp_pct);
-        require(amount <= address(this).balance, "Not enough balance");
+        if (state != State.Failed) {
+            checkFailure();
+        }
+        require(state == State.Failed, "Contract must be in failure state to issue refunds");
+        uint256 amount = contributions[msg.sender] * (1 + ((contribCompPct * 1e18) / (100 * 1e18)));
+        require(amount <= address(this).balance, "Amount is not leq balance");
         contributions[msg.sender] = 0;
         payable(msg.sender).transfer(amount);
     }
 
-    // TODO after the deadline, let sponsor claim all unowed interest (eg if the goal is 60% achieved, give the sponsor back 40% of the interest)
+
+    function claimUnowedContribComp() public {
+        /// after the deadline, let sponsor claim all unowed contrib_comp (eg if the goal is 60% achieved, give the sponsor back 40% of the contrib_comp)
+        require(msg.sender == sponsor, "Method can only be called by the sponsor");
+        require(state == State.Failed, "Contract must be in failure state");
+
+        uint256 goalReachedPercent = (totalContributions * 100 * 1e18) / (goal * 1e18);
+        if(goalReachedPercent < 100) {
+            uint256 unowedPercent = 100 - goalReachedPercent;
+            uint256 unowedContribComp = (goal * contribCompPct * unowedPercent * 1e18) / (100 * 100 * 1e18);
+            require(unowedContribComp <= address(this).balance, "Not enough balance");
+
+            sponsor.transfer(unowedContribComp);
+        }
+    }
 }
 
 contract DACFactory {
@@ -89,12 +102,12 @@ contract DACFactory {
         address _arbitrator,
         uint256 _deadline,
         uint256 _goal,
-        uint256 _contrib_comp_pct,
-        uint256 _sponsor_comp_pct
+        uint256 _contribCompPct,
+        uint256 _sponsorCompPct
     ) public payable returns (DAC) {
-        require(msg.value >= (_goal * (100 + _contrib_comp_pct) * 1e18) / (100 * 1e18), "Insufficient sponsor fund");
-        require(msg.value <= (_goal * (100 + _contrib_comp_pct) * 1e18) / (100 * 1e18), "Overfunded");  // TODO say how much is needed (for both of these)
-        DAC dac = new DAC(payable(msg.sender), _arbitrator, _deadline, _goal, _contrib_comp_pct, _sponsor_comp_pct);
+        require(msg.value >= (_goal * (100 + _contribCompPct) * 1e18) / (100 * 1e18), "Insufficient sponsor fund");
+        require(msg.value <= (_goal * (100 + _contribCompPct) * 1e18) / (100 * 1e18), "Overfunded");  // TODO say how much is needed (for both of these)
+        DAC dac = new DAC(payable(msg.sender), _arbitrator, _deadline, _goal, _contribCompPct, _sponsorCompPct);
         contracts.push(dac);
         return dac;
     }
