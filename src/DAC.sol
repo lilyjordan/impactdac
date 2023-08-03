@@ -100,8 +100,6 @@ contract DAC {
 }
 
 contract DACFactory {
-    DAC[] public contracts;
-
     function createDAC(
         address _arbitrator,
         uint256 _deadline,
@@ -112,11 +110,6 @@ contract DACFactory {
         require(msg.value >= (_goal * (100 + _contribCompPct) * 1e18) / (100 * 1e18), "Insufficient sponsor fund");
         require(msg.value <= (_goal * (100 + _contribCompPct) * 1e18) / (100 * 1e18), "Overfunded");  // TODO say how much is needed (for both of these)
         DAC dac = new DAC(payable(msg.sender), _arbitrator, _deadline, _goal, _contribCompPct, _sponsorCompPct);
-        contracts.push(dac);
         return dac;
-    }
-
-    function getContracts() public view returns (DAC[] memory) {
-        return contracts;
     }
 }

@@ -159,8 +159,4 @@ contract DACTest is Test {
         uint256 unowedContribComp = (dac.goal() * contribCompPct * unowedPercent * 1e18) / (100 * 100 * 1e18);
         assertEq(sponsor.balance, sponsorBalanceInitial + unowedContribComp);
     }
-
-    function testGetContracts() public {
-
-    }
 }
