@@ -137,6 +137,29 @@ contract DACTest is Test {
         assertEq(contributors[1].balance, contributorBalanceInitial1 - amount1 + amountRefunded1);
         assertEq(contributors[2].balance, contributorBalanceInitial2 - amount2 + amountRefunded2);
     }
+
+    function testClaimUnowedContribComp() public {
+        uint256 amount0 = 200;
+        uint256 amount1 = 300;
+
+        vm.prank(contributors[0]);
+        dac.contribute{ value: amount0 }();
+
+        vm.prank(contributors[1]);
+        dac.contribute{ value: amount1 }();
+
+        vm.warp(deadline + 1);
+
+        uint256 sponsorBalanceInitial = sponsor.balance;
+        vm.prank(sponsor);
+        dac.claimUnowedContribComp();
+
+        uint256 goalReachedPercent = ((200 + 300) * 100 * 1e18) / (dac.goal() * 1e18);
+        uint256 unowedPercent = 100 - goalReachedPercent;
+        uint256 unowedContribComp = (dac.goal() * contribCompPct * unowedPercent * 1e18) / (100 * 100 * 1e18);
+        assertEq(sponsor.balance, sponsorBalanceInitial + unowedContribComp);
+    }
+
     function testGetContracts() public {
 
     }

@@ -82,6 +82,10 @@ contract DAC {
     function claimUnowedContribComp() public {
         /// after the deadline, let sponsor claim all unowed contrib_comp (eg if the goal is 60% achieved, give the sponsor back 40% of the contrib_comp)
         require(msg.sender == sponsor, "Method can only be called by the sponsor");
+
+        if (state != State.Failed) {
+            checkFailure();
+        }
         require(state == State.Failed, "Contract must be in failure state");
 
         uint256 goalReachedPercent = (totalContributions * 100 * 1e18) / (goal * 1e18);
