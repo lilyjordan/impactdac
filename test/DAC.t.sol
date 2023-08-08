@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import {DAC, DACFactory} from "../src/DAC.sol";
+import {DAC, DACFactory} from "../contracts/DAC.sol";
 
 
 contract DACTest is Test {
@@ -21,6 +21,7 @@ contract DACTest is Test {
     uint256 public STATE_APPROVED = 2;
     uint256 public STATE_FAILED = 3;
 
+
     function setUp() public {
         for (uint i=0; i<contributors.length; i++) {
             contributors[i] = payable(vm.addr(i + 1));  // private key can't be 0 so we start with 1
@@ -36,6 +37,9 @@ contract DACTest is Test {
         goal = 1000;
         contribCompPct = 5;
         sponsorCompPct = 10;
+
+        console.log(arbitrator);
+        console.log(deadline);
 
         DACFactory factory = new DACFactory();
         vm.prank(sponsor);
