@@ -25,11 +25,16 @@ contract DAC {
         uint256 _sponsorCompPct
     ) {
         sponsor = _sponsor;
+        // TODO validate that this isn't the zero address
         arbitrator = _arbitrator;
+        // TODO validate that this isn't the zero address
         deadline = _deadline;
+        // TODO validate that this isn't in the past
         goal = _goal;
         contribCompPct = _contribCompPct;
+        // TODO validate that this is in [0, 100)
         sponsorCompPct = _sponsorCompPct;
+        // TODO validate that this is in [0, 100)
         state = State.Funding;
     }
 
