@@ -9,6 +9,7 @@ contract DAC {
     uint256 public goal;
     uint256 public contribCompPct;
     uint256 public sponsorCompPct;
+    string public title;
 
     mapping(address => uint256) public contributions;
     uint256 public totalContributions;
@@ -22,7 +23,8 @@ contract DAC {
         uint256 _deadline,
         uint256 _goal,
         uint256 _contribCompPct,
-        uint256 _sponsorCompPct
+        uint256 _sponsorCompPct,
+        string _title
     ) {
         sponsor = _sponsor;
         // TODO validate that this isn't the zero address
@@ -35,6 +37,7 @@ contract DAC {
         // TODO validate that this is in [0, 100)
         sponsorCompPct = _sponsorCompPct;
         // TODO validate that this is in [0, 100)
+        title = _title;
         state = State.Funding;
     }
 
@@ -109,11 +112,12 @@ contract DACFactory {
         uint256 _deadline,
         uint256 _goal,
         uint256 _contribCompPct,
-        uint256 _sponsorCompPct
+        uint256 _sponsorCompPct,
+        string _title
     ) public payable returns (DAC) {
         require(msg.value >= (_goal * (100 + _contribCompPct) * 1e18) / (100 * 1e18), "Insufficient sponsor fund");
         require(msg.value <= (_goal * (100 + _contribCompPct) * 1e18) / (100 * 1e18), "Overfunded");
-        DAC dac = new DAC(payable(msg.sender), _arbitrator, _deadline, _goal, _contribCompPct, _sponsorCompPct);
+        DAC dac = new DAC(payable(msg.sender), _arbitrator, _deadline, _goal, _contribCompPct, _sponsorCompPct, _title);
         return dac;
     }
 }
