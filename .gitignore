@@ -12,3 +12,9 @@ out/
 .env.local
 
 remappings.txt
+
+# local dev database
+*.db
+
+# Artifacts
+frontend/artifacts/*
