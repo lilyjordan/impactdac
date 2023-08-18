@@ -6,8 +6,14 @@ import { ethers } from "ethers";
 import DACArtifact from '../artifacts/DAC.sol/DAC.json';
 import DACFactoryArtifact from '../artifacts/DAC.sol/DACFactory.json';
 import dynamic from 'next/dynamic';
+import { Passero_One } from 'next/font/google';
 
-let DACFactoryAddress = 'YOUR_DAC_FACTORY_CONTRACT_ADDRESS'; // replace with your contract address
+
+let DACFactoryAddress: string;
+
+fetch("/run-latest.json")
+.then(response => response.json())
+.then(json => {DACFactoryAddress = json.transactions[0].contractAddress; console.log(DACFactoryAddress)});
 
 declare global {
   interface Window {
@@ -15,13 +21,86 @@ declare global {
   }
 }
 
-export class App extends React.Component {
+type CreateDACForm = {
+  arbitrator: string;
+  deadline: string;
+  goal: string;
+  contribCompPct: string;
+  sponsorCompPct: string;
+  title: string;
+};
+
+type ContributeForm = {
+  dacAddress: string;
+  amount: string;
+};
+
+type ApprovePayoutForm = {
+  dacAddressPayout: string;
+  founder: string;
+};
+
+type RefundForm = {
+  dacAddressRefund: string;
+};
+
+type ClaimCompForm = {
+  dacAddressClaim: string;
+};
+
+type AppState = {
+  formCreateDAC: CreateDACForm;
+  formContribute: ContributeForm;
+  formApprovePayout: ApprovePayoutForm;
+  formRefund: RefundForm;
+  formClaimComp: ClaimCompForm;
+  selectedAddress?: string;
+  DACs: any[];
+  txBeingSent?: string;
+  messageDuringTx?: string;
+  transactionError?: string;
+  networkError?: string;
+}
+
+export class App extends React.Component<{}, AppState> {
+  private provider?: ethers.BrowserProvider;
   private signer?: ethers.Signer;
   private DACFactory?: ethers.Contract;
 
+  state = {
+    selectedAddress: undefined,
+    DACs: [],
+    txBeingSent: undefined,
+    messageDuringTx: undefined,
+    transactionError: undefined,
+    networkError: undefined,
+    formCreateDAC: {
+      arbitrator: "",
+      deadline: "",
+      goal: "",
+      contribCompPct: "",
+      sponsorCompPct: "",
+      title: "",
+    },
+    formContribute: {
+      dacAddress: "",
+      amount: "",
+    },
+    formApprovePayout: {
+      dacAddressPayout: "",
+      founder: "",
+    },
+    formRefund: {
+      dacAddressRefund: "",
+    },
+    formClaimComp: {
+      dacAddressClaim: "",
+    },
+  };
+
   async _initializeEthers() {
-    let provider = new ethers.BrowserProvider(window.ethereum);
-    this.signer = await provider.getSigner();
+    this.provider = new ethers.BrowserProvider(window.ethereum);
+    this.signer = await this.provider.getSigner();
     this.DACFactory = new ethers.Contract(
       DACFactoryAddress,
       DACFactoryArtifact.abi,
@@ -30,9 +109,23 @@ export class App extends React.Component {
     await this.DACFactory.deployed();
   }
 
+  async _updateContracts() {
+    if (!this.DACFactory) {
+      return;
+    }
+    const code = await this.provider.getCode(DACFactoryAddress);
+    let holdings = await this.DACFactory.getHoldings(this.state.selectedAddress);
+    holdings = holdings.map(w => ethers.encodeBytes32String(w));
+    this.setState({markets: holdings});
+  }
+
   // Function to create a new DAC
-  async createDAC(_arbitrator: string, _deadline: number, _goal: number, _contribCompPct: number, _sponsorCompPct: number) {
-      let transaction = await this.DACFactory.createDAC(_arbitrator, _deadline, _goal, _contribCompPct, _sponsorCompPct, {
+  async createDAC(_arbitrator: string, _deadline: number, _goal: number, _contribCompPct: number, _sponsorCompPct: number,
+    _title: string) {
+      if (!this.DACFactory) {
+        throw new Error('DACFactory is not initialized');
+      }
+      let transaction = await this.DACFactory.createDAC(_arbitrator, _deadline, _goal, _contribCompPct, _sponsorCompPct, _title, {
           value: ethers.parseEther((_goal * (100 + _contribCompPct) / 100).toString())
       });
       let receipt = await transaction.wait();
@@ -66,55 +159,130 @@ export class App extends React.Component {
       await transaction.wait();
   }
 
+  updateFormState<T extends keyof AppState>(
+    prevState: AppState,
+    formName: T,
+    name: string,
+    value: string
+  ): AppState {
+    return {
+      ...prevState,
+      [formName]: {
+        ...prevState[formName],
+        [name]: value
+      } as AppState[T] // This cast tells TypeScript that the updated form has the correct type
+    };
+  }
+
+  handleCreateDACChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const name = event.target.name;
+    const value = event.target.value;
+    this.setState({ formCreateDAC: { ...this.state.formCreateDAC, [name]: value } });
+  }
+
+  handleContributeChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const name = event.target.name;
+    const value = event.target.value;
+    this.setState({ formContribute: { ...this.state.formContribute, [name]: value } });
+  }
+
+  handleApprovePayoutChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const name = event.target.name;
+    const value = event.target.value;
+    this.setState({ formApprovePayout: { ...this.state.formApprovePayout, [name]: value } });
+  }
+
+  handleRefundChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const name = event.target.name;
+    const value = event.target.value;
+    this.setState({ formRefund: { ...this.state.formRefund, [name]: value } });
+  }
+
+  handleClaimCompChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const name = event.target.name;
+    const value = event.target.value;
+    this.setState({ formClaimComp: { ...this.state.formClaimComp, [name]: value } });
+  }
+
+  
+
+  // handleChange = (e: React.ChangeEvent<HTMLInputElement>, formName: keyof AppState) => {
+  //   const { name, value } = e.target;
+  //   this.setState((prevState) => {
+  //     const formState = prevState[formName];
+  //     return {
+  //       ...prevState,
+  //       [formName]: {
+  //         ...formState,
+  //         [name]: value
+  //       }
+  //     };
+  //   });
+  // };
+
+
   render() {
     return (
       <div>
-          <h1>Create DAC</h1>
-          <form id="createDACForm">
-              <label htmlFor="arbitrator">Arbitrator:</label><br />
-              <input type="text" id="arbitrator" name="arbitrator" /><br />
-              <label htmlFor="deadline">Deadline:</label><br />
-              <input type="text" id="deadline" name="deadline" /><br />
-              <label htmlFor="goal">Goal:</label><br />
-              <input type="text" id="goal" name="goal" /><br />
-              <label htmlFor="contribCompPct">Contributor Compensation Percent:</label><br />
-              <input type="text" id="contribCompPct" name="contribCompPct" /><br />
-              <label htmlFor="sponsorCompPct">Sponsor Compensation Percent:</label><br />
-              <input type="text" id="sponsorCompPct" name="sponsorCompPct" /><br />
-              <input type="submit" value="Create" />
-          </form>
+          <div className="m-4">
+            <h1>DACFactoryAddress: {DACFactoryAddress}</h1>
+            <h1>Create DAC</h1>
+            <form id="createDACForm">
+                <label htmlFor="arbitrator">Arbitrator:</label><br />
+                <input type="text" id="arbitrator" name="arbitrator"/><br />
+                <label htmlFor="deadline">Deadline:</label><br />
+                <input type="text" id="deadline" name="deadline" /><br />
+                <label htmlFor="goal">Goal:</label><br />
+                <input type="text" id="goal" name="goal" /><br />
+                <label htmlFor="contribCompPct">Contributor Compensation Percent:</label><br />
+                <input type="text" id="contribCompPct" name="contribCompPct" /><br />
+                <label htmlFor="sponsorCompPct">Sponsor Compensation Percent:</label><br />
+                <input type="text" id="sponsorCompPct" name="sponsorCompPct" /><br />
+                <label htmlFor="title">Title:</label><br />
+                <input type="text" id="title" name="title" /><br />
+                <input className="text-green-500" type="submit" value="Create" />
+            </form>
+          </div>
   
-          <h1>Contribute to DAC</h1>
-          <form id="contributeForm">
-              <label htmlFor="dacAddress">DAC Address:</label><br />
-              <input type="text" id="dacAddress" name="dacAddress" /><br />
-              <label htmlFor="amount">Amount:</label><br />
-              <input type="text" id="amount" name="amount" /><br />
-              <input type="submit" value="Contribute" />
-          </form>
+          <div className="m-4">
+            <h1>Contribute to DAC</h1>
+            <form id="contributeForm">
+                <label htmlFor="dacAddress">DAC Address:</label><br />
+                <input type="text" id="dacAddress" name="dacAddress" /><br />
+                <label htmlFor="amount">Amount:</label><br />
+                <input type="text" id="amount" name="amount" /><br />
+                <input className="text-green-500" type="submit" value="Contribute" />
+            </form>
+          </div>
   
-          <h1>Approve Payout</h1>
-          <form id="approvePayoutForm">
-              <label htmlFor="dacAddressPayout">DAC Address:</label><br />
-              <input type="text" id="dacAddressPayout" name="dacAddressPayout" /><br />
-              <label htmlFor="founder">Founder:</label><br />
-              <input type="text" id="founder" name="founder" /><br />
-              <input type="submit" value="Approve Payout" />
-          </form>
+          <div className="m-4">
+            <h1>Approve Payout</h1>
+            <form id="approvePayoutForm">
+                <label htmlFor="dacAddressPayout">DAC Address:</label><br />
+                <input type="text" id="dacAddressPayout" name="dacAddressPayout" /><br />
+                <label htmlFor="founder">Founder:</label><br />
+                <input type="text" id="founder" name="founder" /><br />
+                <input className="text-green-500" type="submit" value="Approve Payout" />
+            </form>
+          </div>
   
-          <h1>Refund</h1>
-          <form id="refundForm">
-              <label htmlFor="dacAddressRefund">DAC Address:</label><br />
-              <input type="text" id="dacAddressRefund" name="dacAddressRefund" /><br />
-              <input type="submit" value="Refund" />
-          </form>
+          <div className="m-4">
+            <h1>Refund</h1>
+            <form id="refundForm">
+                <label htmlFor="dacAddressRefund">DAC Address:</label><br />
+                <input type="text" id="dacAddressRefund" name="dacAddressRefund" /><br />
+                <input className="text-green-500" type="submit" value="Refund" />
+            </form>
+          </div>
   
-          <h1>Claim Unowed Contribution Compensation</h1>
-          <form id="claimCompForm">
-              <label htmlFor="dacAddressClaim">DAC Address:</label><br />
-              <input type="text" id="dacAddressClaim" name="dacAddressClaim" /><br />
-              <input type="submit" value="Claim Compensation" />
-          </form>
+          <div className="m-4">
+            <h1>Claim Unowed Contribution Compensation</h1>
+            <form id="claimCompForm">
+                <label htmlFor="dacAddressClaim">DAC Address:</label><br />
+                <input type="text" id="dacAddressClaim" name="dacAddressClaim" /><br />
+                <input className="text-green-500" type="submit" value="Claim Compensation" />
+            </form>
+          </div>
       </div>
     );
   }
