@@ -13,7 +13,7 @@ let DACFactoryAddress: string;
 
 fetch("/run-latest.json")
 .then(response => response.json())
-.then(json => {DACFactoryAddress = json.transactions[0].contractAddress; console.log(DACFactoryAddress)});
+.then(json => {DACFactoryAddress = json.transactions[0].contractAddress});
 
 declare global {
   interface Window {
@@ -23,10 +23,10 @@ declare global {
 
 type CreateDACForm = {
   arbitrator: string;
-  deadline: string;
-  goal: string;
-  contribCompPct: string;
-  sponsorCompPct: string;
+  deadline: number;
+  goal: number;
+  contribCompPct: number;
+  sponsorCompPct: number;
   title: string;
 };
 
@@ -76,10 +76,10 @@ export class App extends React.Component<{}, AppState> {
     networkError: undefined,
     formCreateDAC: {
       arbitrator: "",
-      deadline: "",
-      goal: "",
-      contribCompPct: "",
-      sponsorCompPct: "",
+      deadline: 0,
+      goal: 0,
+      contribCompPct: 0,
+      sponsorCompPct: 0,
       title: "",
     },
     formContribute: {
@@ -97,6 +97,7 @@ export class App extends React.Component<{}, AppState> {
       dacAddressClaim: "",
     },
   };
+
 
   async _initializeEthers() {
     this.provider = new ethers.BrowserProvider(window.ethereum);
@@ -120,8 +121,9 @@ export class App extends React.Component<{}, AppState> {
   }
 
   // Function to create a new DAC
-  async createDAC(_arbitrator: string, _deadline: number, _goal: number, _contribCompPct: number, _sponsorCompPct: number,
-    _title: string) {
+  createDAC = async (_arbitrator: string, _deadline: number, _goal: number, _contribCompPct: number, _sponsorCompPct: number,
+    _title: string) => {
+      console.log('called');
       if (!this.DACFactory) {
         throw new Error('DACFactory is not initialized');
       }
@@ -131,6 +133,7 @@ export class App extends React.Component<{}, AppState> {
       let receipt = await transaction.wait();
       let dacAddress = receipt.events[0].args[0]; // get the address of the new DAC
       let dac = new ethers.Contract(dacAddress, DACArtifact.abi, this.signer);
+      console.log('created dac:');
       console.log(dac);
       return dac;
   }
@@ -159,25 +162,21 @@ export class App extends React.Component<{}, AppState> {
       await transaction.wait();
   }
 
-  updateFormState<T extends keyof AppState>(
-    prevState: AppState,
-    formName: T,
-    name: string,
-    value: string
-  ): AppState {
-    return {
-      ...prevState,
-      [formName]: {
-        ...prevState[formName],
-        [name]: value
-      } as AppState[T] // This cast tells TypeScript that the updated form has the correct type
-    };
-  }
-
   handleCreateDACChange(event: React.ChangeEvent<HTMLInputElement>) {
     const name = event.target.name;
     const value = event.target.value;
     this.setState({ formCreateDAC: { ...this.state.formCreateDAC, [name]: value } });
+  }
+
+  handleCreateDACSubmit= (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    this.createDAC(this.state.formCreateDAC.arbitrator,
+      this.state.formCreateDAC.deadline,
+      this.state.formCreateDAC.goal,
+      this.state.formCreateDAC.contribCompPct,
+      this.state.formCreateDAC.sponsorCompPct,
+      this.state.formCreateDAC.title
+      )
   }
 
   handleContributeChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -227,7 +226,7 @@ export class App extends React.Component<{}, AppState> {
           <div className="m-4">
             <h1>DACFactoryAddress: {DACFactoryAddress}</h1>
             <h1>Create DAC</h1>
-            <form id="createDACForm">
+            <form id="createDACForm" onSubmit={this.handleCreateDACSubmit}>
                 <label htmlFor="arbitrator">Arbitrator:</label><br />
                 <input type="text" id="arbitrator" name="arbitrator"/><br />
                 <label htmlFor="deadline">Deadline:</label><br />
