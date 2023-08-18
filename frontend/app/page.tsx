@@ -6,14 +6,24 @@ import { ethers } from "ethers";
 import DACArtifact from '../artifacts/DAC.sol/DAC.json';
 import DACFactoryArtifact from '../artifacts/DAC.sol/DACFactory.json';
 import dynamic from 'next/dynamic';
-import { Passero_One } from 'next/font/google';
+import { CreateDACForm, ContributeForm, ApprovePayoutForm,
+  RefundForm, ClaimCompForm, AppState, Network } from './types';
 
+const NETWORK_IDS: Network = {
+  hardhat: '31337',
+  anvil: '31337',
+  sepolia: '11155111',
+  goerli: '5',
+  polygon_mainnet: '137'
+}
 
-let DACFactoryAddress: string;
-
-fetch("/run-latest.json")
-.then(response => response.json())
-.then(json => {DACFactoryAddress = json.transactions[0].contractAddress});
+const NETWORK_NAMES: Network = {
+  hardhat: 'Hardhat',
+  anvil: 'Anvil',
+  sepolia: 'Sepolia Testnet',
+  goerli: 'Goerli Testnet',
+  polygon_mainnet: 'Polygon Mainnet'
+}
 
 declare global {
   interface Window {
@@ -21,53 +31,15 @@ declare global {
   }
 }
 
-type CreateDACForm = {
-  arbitrator: string;
-  deadline: number;
-  goal: number;
-  contribCompPct: number;
-  sponsorCompPct: number;
-  title: string;
-};
-
-type ContributeForm = {
-  dacAddress: string;
-  amount: string;
-};
-
-type ApprovePayoutForm = {
-  dacAddressPayout: string;
-  founder: string;
-};
-
-type RefundForm = {
-  dacAddressRefund: string;
-};
-
-type ClaimCompForm = {
-  dacAddressClaim: string;
-};
-
-type AppState = {
-  formCreateDAC: CreateDACForm;
-  formContribute: ContributeForm;
-  formApprovePayout: ApprovePayoutForm;
-  formRefund: RefundForm;
-  formClaimComp: ClaimCompForm;
-  selectedAddress?: string;
-  DACs: any[];
-  txBeingSent?: string;
-  messageDuringTx?: string;
-  transactionError?: string;
-  networkError?: string;
-}
+const network: keyof Network | undefined = process.env.NEXT_PUBLIC_NETWORK;
 
 export class App extends React.Component<{}, AppState> {
   private provider?: ethers.BrowserProvider;
   private signer?: ethers.Signer;
   private DACFactory?: ethers.Contract;
+  private DACFactoryAddress?: string
 
-  state = {
+  private initialState: AppState = {
     selectedAddress: undefined,
     DACs: [],
     txBeingSent: undefined,
@@ -76,10 +48,10 @@ export class App extends React.Component<{}, AppState> {
     networkError: undefined,
     formCreateDAC: {
       arbitrator: "",
-      deadline: 0,
-      goal: 0,
-      contribCompPct: 0,
-      sponsorCompPct: 0,
+      deadline: null,
+      goal: null,
+      contribCompPct: null,
+      sponsorCompPct: null,
       title: "",
     },
     formContribute: {
@@ -98,37 +70,99 @@ export class App extends React.Component<{}, AppState> {
     },
   };
 
+  state = this.initialState;
+
+  constructor(props: {}) {
+    super(props);
+    this._initializeEthers().then(this._connectWallet);
+  }
 
   async _initializeEthers() {
     this.provider = new ethers.BrowserProvider(window.ethereum);
     this.signer = await this.provider.getSigner();
-    this.DACFactory = new ethers.Contract(
-      DACFactoryAddress,
-      DACFactoryArtifact.abi,
-      this.signer
-    );
-    await this.DACFactory.deployed();
+    fetch("/run-latest.json")
+    .then(response => response.json())
+    .then(json => {
+        this.DACFactoryAddress = json.transactions[0].contractAddress;
+
+        this.DACFactory = new ethers.Contract(
+        this.DACFactoryAddress!,
+        DACFactoryArtifact.abi,
+        this.signer
+      );
+
+      return this.DACFactory.waitForDeployment();
+    });
   }
 
   async _updateContracts() {
     if (!this.DACFactory) {
       return;
     }
-    const code = await this.provider.getCode(DACFactoryAddress);
-    let holdings = await this.DACFactory.getHoldings(this.state.selectedAddress);
-    holdings = holdings.map(w => ethers.encodeBytes32String(w));
-    this.setState({markets: holdings});
+    if (!this.provider) {
+      return;
+    }
+    const code = await this.provider.getCode(this.DACFactoryAddress!);
+    let contracts = await this.DACFactory.getContracts(this.state.selectedAddress);
+    this.setState({DACs: contracts});
+  }
+
+  _resetState() {
+    this.setState(this.initialState);
+  }
+
+  _connectWallet = async () => {
+    console.log('connecting wallet')
+    window.ethereum.request({ method: 'eth_requestAccounts' }).then(async (addresses: string[]) => {
+      this.setState({selectedAddress: addresses[0]});
+      console.log(`addr: ${addresses[0]}`)
+      const balance = await this.provider!.getBalance(addresses[0]);
+      console.log(`balance: ${balance}`);
+    });
+    if (!this._checkNetwork()) {
+      return;
+    }
+
+    window.ethereum.on("accountsChanged", ([newAddress]: [string]) => {
+      if (newAddress === undefined) {
+        return this._resetState();
+      }
+      
+      window.ethereum.request({ method: 'eth_requestAccounts' }).then((addr: string) => this.setState({selectedAddress: addr}));
+    });
+    
+    window.ethereum.on("chainChanged", ([chainId]: [string]) => {
+      this._resetState();
+    });
+  }
+
+  _checkNetwork = () => {
+    if (!network) {
+      throw new Error('Network is not defined in environment variables')
+    }
+
+    if (parseInt(window.ethereum.chainId, 16).toString() === NETWORK_IDS[network]) {
+      return true;
+    }
+
+    this.setState({ 
+      networkError: `Connect to ${NETWORK_NAMES[network]}`
+    });
+
+    return false;
   }
 
   // Function to create a new DAC
   createDAC = async (_arbitrator: string, _deadline: number, _goal: number, _contribCompPct: number, _sponsorCompPct: number,
     _title: string) => {
-      console.log('called');
       if (!this.DACFactory) {
         throw new Error('DACFactory is not initialized');
       }
+      console.log((_goal * (100 + _contribCompPct) / 100).toString());
+      const value = ethers.parseEther((_goal * (100 + _contribCompPct) / 100).toString());
+      console.log(`value: ${value}`)
       let transaction = await this.DACFactory.createDAC(_arbitrator, _deadline, _goal, _contribCompPct, _sponsorCompPct, _title, {
-          value: ethers.parseEther((_goal * (100 + _contribCompPct) / 100).toString())
+          value: value
       });
       let receipt = await transaction.wait();
       let dacAddress = receipt.events[0].args[0]; // get the address of the new DAC
@@ -162,22 +196,29 @@ export class App extends React.Component<{}, AppState> {
       await transaction.wait();
   }
 
-  handleCreateDACChange(event: React.ChangeEvent<HTMLInputElement>) {
+  handleCreateDACChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const name = event.target.name;
     const value = event.target.value;
     this.setState({ formCreateDAC: { ...this.state.formCreateDAC, [name]: value } });
   }
 
-  handleCreateDACSubmit= (event: React.FormEvent<HTMLFormElement>) => {
+  // TODO don't allow submit until everything's filled out and non-null
+  handleCreateDACSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    this.createDAC(this.state.formCreateDAC.arbitrator,
-      this.state.formCreateDAC.deadline,
-      this.state.formCreateDAC.goal,
-      this.state.formCreateDAC.contribCompPct,
-      this.state.formCreateDAC.sponsorCompPct,
-      this.state.formCreateDAC.title
-      )
+    try {
+      await this.createDAC(
+        this.state.formCreateDAC.arbitrator,
+        this.state.formCreateDAC.deadline,
+        this.state.formCreateDAC.goal,
+        this.state.formCreateDAC.contribCompPct,
+        this.state.formCreateDAC.sponsorCompPct,
+        this.state.formCreateDAC.title
+      );
+    } catch (error) {
+      console.error(error);
+    }
   }
+  
 
   handleContributeChange(event: React.ChangeEvent<HTMLInputElement>) {
     const name = event.target.name;
@@ -203,42 +244,25 @@ export class App extends React.Component<{}, AppState> {
     this.setState({ formClaimComp: { ...this.state.formClaimComp, [name]: value } });
   }
 
-  
-
-  // handleChange = (e: React.ChangeEvent<HTMLInputElement>, formName: keyof AppState) => {
-  //   const { name, value } = e.target;
-  //   this.setState((prevState) => {
-  //     const formState = prevState[formName];
-  //     return {
-  //       ...prevState,
-  //       [formName]: {
-  //         ...formState,
-  //         [name]: value
-  //       }
-  //     };
-  //   });
-  // };
-
-
   render() {
     return (
       <div>
           <div className="m-4">
-            <h1>DACFactoryAddress: {DACFactoryAddress}</h1>
+            <h1>DACFactoryAddress: {this.DACFactoryAddress}</h1>
             <h1>Create DAC</h1>
             <form id="createDACForm" onSubmit={this.handleCreateDACSubmit}>
                 <label htmlFor="arbitrator">Arbitrator:</label><br />
-                <input type="text" id="arbitrator" name="arbitrator"/><br />
+                <input type="text" id="arbitrator" name="arbitrator" onChange={this.handleCreateDACChange}/><br />
                 <label htmlFor="deadline">Deadline:</label><br />
-                <input type="text" id="deadline" name="deadline" /><br />
+                <input type="number" id="deadline" name="deadline" onChange={this.handleCreateDACChange}/><br />
                 <label htmlFor="goal">Goal:</label><br />
-                <input type="text" id="goal" name="goal" /><br />
+                <input type="number" id="goal" name="goal" onChange={this.handleCreateDACChange}/><br />
                 <label htmlFor="contribCompPct">Contributor Compensation Percent:</label><br />
-                <input type="text" id="contribCompPct" name="contribCompPct" /><br />
+                <input type="number" id="contribCompPct" name="contribCompPct" onChange={this.handleCreateDACChange}/><br />
                 <label htmlFor="sponsorCompPct">Sponsor Compensation Percent:</label><br />
-                <input type="text" id="sponsorCompPct" name="sponsorCompPct" /><br />
+                <input type="number" id="sponsorCompPct" name="sponsorCompPct" onChange={this.handleCreateDACChange}/><br />
                 <label htmlFor="title">Title:</label><br />
-                <input type="text" id="title" name="title" /><br />
+                <input type="text" id="title" name="title" onChange={this.handleCreateDACChange}/><br />
                 <input className="text-green-500" type="submit" value="Create" />
             </form>
           </div>
