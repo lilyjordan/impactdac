@@ -24,7 +24,7 @@ contract DAC {
         uint256 _goal,
         uint256 _contribCompPct,
         uint256 _sponsorCompPct,
-        string _title
+        string memory _title
     ) {
         sponsor = _sponsor;
         // TODO validate that this isn't the zero address
@@ -113,7 +113,7 @@ contract DACFactory {
         uint256 _goal,
         uint256 _contribCompPct,
         uint256 _sponsorCompPct,
-        string _title
+        string memory _title
     ) public payable returns (DAC) {
         require(msg.value >= (_goal * (100 + _contribCompPct) * 1e18) / (100 * 1e18), "Insufficient sponsor fund");
         require(msg.value <= (_goal * (100 + _contribCompPct) * 1e18) / (100 * 1e18), "Overfunded");

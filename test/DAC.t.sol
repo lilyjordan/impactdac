@@ -43,7 +43,7 @@ contract DACTest is Test {
 
         DACFactory factory = new DACFactory();
         vm.prank(sponsor);
-        dac = factory.createDAC{ value: (goal * (100 + contribCompPct) * 1e18) / (100 * 1e18) }(arbitrator, deadline, goal, contribCompPct, sponsorCompPct);
+        dac = factory.createDAC{ value: (goal * (100 + contribCompPct) * 1e18) / (100 * 1e18) }(arbitrator, deadline, goal, contribCompPct, sponsorCompPct, 'title');
     }
 
     function testContribute() public {
