@@ -32,7 +32,7 @@ contract DAC {
         // TODO validate that this isn't the zero address
         deadline = _deadline;
         // TODO validate that this isn't in the past
-        goal = _goal;
+        goal = _goal * 1e18;  // it's specified in ETH so we convert it to WEI
         contribCompPct = _contribCompPct;
         // TODO validate that this is in [0, 100)
         sponsorCompPct = _sponsorCompPct;
@@ -46,7 +46,7 @@ contract DAC {
         require(block.timestamp < deadline, "Deadline passed");
 
         uint256 potentialTotal = totalContributions + msg.value;
-        uint256 goalPlusSponsorComp =  (goal * (100 + sponsorCompPct) * 1e18) / (100 * 1e18);
+        uint256 goalPlusSponsorComp =  (goal * (100 + sponsorCompPct)) / 100;
 
         if (potentialTotal > goalPlusSponsorComp) {
             revert("Contribution would exceed goal");
@@ -63,7 +63,7 @@ contract DAC {
         require(state == State.Funded, "Not funded");
         state = State.Approved;
         // Pay back the sponsor's contribution
-        sponsor.transfer((goal * sponsorCompPct * 1e18) / (100 * 1e18));
+        sponsor.transfer((goal * sponsorCompPct) / 100);
         founder.transfer(goal);  // Whole function reverts if this fails
     }
 
@@ -79,7 +79,7 @@ contract DAC {
             checkFailure();
         }
         require(state == State.Failed, "Contract must be in failure state to issue refunds");
-        uint256 amount = contributions[msg.sender] * (1 + ((contribCompPct * 1e18) / (100 * 1e18)));
+        uint256 amount = contributions[msg.sender] * (1 + (contribCompPct / 100));
         require(amount <= address(this).balance, "Amount is not leq balance");
         contributions[msg.sender] = 0;
         payable(msg.sender).transfer(amount);
@@ -95,10 +95,10 @@ contract DAC {
         }
         require(state == State.Failed, "Contract must be in failure state");
 
-        uint256 goalReachedPercent = (totalContributions * 100 * 1e18) / (goal * 1e18);
+        uint256 goalReachedPercent = (totalContributions * 100) / goal;
         if(goalReachedPercent < 100) {
             uint256 unowedPercent = 100 - goalReachedPercent;
-            uint256 unowedContribComp = (goal * contribCompPct * unowedPercent * 1e18) / (100 * 100 * 1e18);
+            uint256 unowedContribComp = (goal * contribCompPct * unowedPercent) / (100 * 100);
             require(unowedContribComp <= address(this).balance, "Not enough balance");
 
             sponsor.transfer(unowedContribComp);
@@ -115,8 +115,9 @@ contract DACFactory {
         uint256 _sponsorCompPct,
         string memory _title
     ) public payable returns (DAC) {
-        require(msg.value >= (_goal * (100 + _contribCompPct) * 1e18) / (100 * 1e18), "Insufficient sponsor fund");
-        require(msg.value <= (_goal * (100 + _contribCompPct) * 1e18) / (100 * 1e18), "Overfunded");
+        console.log('value:', msg.value);
+        require(msg.value >= (_goal * (100 + _contribCompPct) * 1e18) / 100, "Insufficient sponsor fund");
+        require(msg.value <= (_goal * (100 + _contribCompPct) * 1e18) / 100, "Overfunded");
         DAC dac = new DAC(payable(msg.sender), _arbitrator, _deadline, _goal, _contribCompPct, _sponsorCompPct, _title);
         return dac;
     }

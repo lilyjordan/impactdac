@@ -6,8 +6,9 @@ import { ethers } from "ethers";
 import DACArtifact from '../artifacts/DAC.sol/DAC.json';
 import DACFactoryArtifact from '../artifacts/DAC.sol/DACFactory.json';
 import dynamic from 'next/dynamic';
-import { CreateDACForm, ContributeForm, ApprovePayoutForm,
-  RefundForm, ClaimCompForm, AppState, Network } from './types';
+import { CreateDACForm, SubmittedCreateDACForm, ContributeForm,
+  ApprovePayoutForm, RefundForm, ClaimCompForm, AppState,
+  Network } from './types';
 
 const NETWORK_IDS: Network = {
   hardhat: '31337',
@@ -47,12 +48,12 @@ export class App extends React.Component<{}, AppState> {
     transactionError: undefined,
     networkError: undefined,
     formCreateDAC: {
-      arbitrator: "",
-      deadline: null,
-      goal: null,
-      contribCompPct: null,
-      sponsorCompPct: null,
-      title: "",
+      arbitrator: undefined,
+      deadline: undefined,
+      goal: undefined,
+      contribCompPct: undefined,
+      sponsorCompPct: undefined,
+      title: undefined,
     },
     formContribute: {
       dacAddress: "",
@@ -153,15 +154,21 @@ export class App extends React.Component<{}, AppState> {
   }
 
   // Function to create a new DAC
-  createDAC = async (_arbitrator: string, _deadline: number, _goal: number, _contribCompPct: number, _sponsorCompPct: number,
-    _title: string) => {
+  createDAC = async (form : SubmittedCreateDACForm) => {
       if (!this.DACFactory) {
         throw new Error('DACFactory is not initialized');
       }
-      console.log((_goal * (100 + _contribCompPct) / 100).toString());
-      const value = ethers.parseEther((_goal * (100 + _contribCompPct) / 100).toString());
+      console.log(`_goal: ${form.goal}`);
+      console.log(`_contribCompPct: ${form.contribCompPct}`);
+      console.log('test:', 100 * (100 + 5) / 100);
+      console.log('test2:', (100 * (100 + 5) / 100).toString());
+      console.log(`value in ETH: ${(form.goal * (100 + form.contribCompPct) / 100).toString()}`);
+      console.log(typeof form.goal);
+      console.log(typeof form.contribCompPct);
+      const value = ethers.parseEther((form.goal * (100 + form.contribCompPct) / 100).toString());
       console.log(`value: ${value}`)
-      let transaction = await this.DACFactory.createDAC(_arbitrator, _deadline, _goal, _contribCompPct, _sponsorCompPct, _title, {
+      let transaction = await this.DACFactory.createDAC(form.arbitrator, form.deadline, form.goal, form.contribCompPct,
+          form.sponsorCompPct, form.title, {
           value: value
       });
       let receipt = await transaction.wait();
@@ -197,28 +204,45 @@ export class App extends React.Component<{}, AppState> {
   }
 
   handleCreateDACChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const name = event.target.name;
-    const value = event.target.value;
+    const name = event.target.name as keyof CreateDACForm;
+    let value: string | number | null = event.target.value;
+  
+    if (typeof this.state.formCreateDAC[name] === 'number' || this.state.formCreateDAC[name] === null) {
+      value = Number(value);
+    }
+
     this.setState({ formCreateDAC: { ...this.state.formCreateDAC, [name]: value } });
+
   }
 
-  // TODO don't allow submit until everything's filled out and non-null
+  isFormValid = (form: CreateDACForm): form is SubmittedCreateDACForm => {
+    return !Object.values(form).some(value => value === undefined);
+  };
+
+  parseCreateDACForm = (form: SubmittedCreateDACForm): SubmittedCreateDACForm => {
+    return {
+      arbitrator: form.arbitrator,
+      deadline: Number(form.deadline),
+      goal: Number(form.goal),
+      contribCompPct: Number(form.contribCompPct),
+      sponsorCompPct: Number(form.sponsorCompPct),
+      title: form.title
+    };
+  };
+  
   handleCreateDACSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
-      await this.createDAC(
-        this.state.formCreateDAC.arbitrator,
-        this.state.formCreateDAC.deadline,
-        this.state.formCreateDAC.goal,
-        this.state.formCreateDAC.contribCompPct,
-        this.state.formCreateDAC.sponsorCompPct,
-        this.state.formCreateDAC.title
-      );
+      if (this.isFormValid(this.state.formCreateDAC)) {
+        const parsedForm = this.parseCreateDACForm(this.state.formCreateDAC);
+        await this.createDAC(parsedForm);
+      } else {
+        alert('fill out all fields');
+      }
     } catch (error) {
       console.error(error);
     }
   }
-  
 
   handleContributeChange(event: React.ChangeEvent<HTMLInputElement>) {
     const name = event.target.name;
@@ -249,6 +273,10 @@ export class App extends React.Component<{}, AppState> {
       <div>
           <div className="m-4">
             <h1>DACFactoryAddress: {this.DACFactoryAddress}</h1>
+            <div>
+              <h2>contracts:</h2>
+              {this.state.DACs}
+            </div>
             <h1>Create DAC</h1>
             <form id="createDACForm" onSubmit={this.handleCreateDACSubmit}>
                 <label htmlFor="arbitrator">Arbitrator:</label><br />

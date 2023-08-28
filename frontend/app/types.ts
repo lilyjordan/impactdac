@@ -1,11 +1,13 @@
 export type CreateDACForm = {
-  arbitrator: string;
-  deadline: number | null;
-  goal: number | null;
-  contribCompPct: number | null;
-  sponsorCompPct: number | null;
-  title: string;
+  arbitrator?: string;
+  deadline?: number;
+  goal?: number;
+  contribCompPct?: number;
+  sponsorCompPct?: number;
+  title?: string;
 };
+
+export type SubmittedCreateDACForm = Required<CreateDACForm>;
 
 export type ContributeForm = {
   dacAddress: string;
