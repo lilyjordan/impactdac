@@ -25,7 +25,7 @@ contract DAC {
         uint256 _contribCompPct,
         uint256 _sponsorCompPct,
         string memory _title
-    ) {
+    ) payable {
         sponsor = _sponsor;
         // TODO validate that this isn't the zero address
         arbitrator = _arbitrator;
@@ -62,8 +62,10 @@ contract DAC {
         require(msg.sender == arbitrator, "Only arbitrator can authorize payout");
         require(state == State.Funded, "Not funded");
         state = State.Approved;
-        // Pay back the sponsor's contribution
-        sponsor.transfer((goal * sponsorCompPct) / 100);
+        // Pay back the sponsor's contribution plus their compensation
+        // and the deposit they put down for contributor compensation
+        // in case of failure.
+        sponsor.transfer(goal * (sponsorCompPct + contribCompPct) / 100);
         founder.transfer(goal);  // Whole function reverts if this fails
     }
 
@@ -79,7 +81,7 @@ contract DAC {
             checkFailure();
         }
         require(state == State.Failed, "Contract must be in failure state to issue refunds");
-        uint256 amount = contributions[msg.sender] * (1 + (contribCompPct / 100));
+        uint256 amount = contributions[msg.sender] + contributions[msg.sender] * contribCompPct / 100;
         require(amount <= address(this).balance, "Amount is not leq balance");
         contributions[msg.sender] = 0;
         payable(msg.sender).transfer(amount);
@@ -118,10 +120,18 @@ contract DACFactory {
         uint256 _sponsorCompPct,
         string memory _title
     ) public payable returns (DAC) {
-        require(msg.value >= (_goal * (100 + _contribCompPct)) / 100, "Insufficient sponsor fund");
-        require(msg.value <= (_goal * (100 + _contribCompPct)) / 100, "Overfunded");
+        require(msg.value >= _goal * _contribCompPct / 100, "Insufficient sponsor fund");
+        require(msg.value <= _goal * _contribCompPct / 100, "Overfunded");
         
-        DAC dac = new DAC(payable(msg.sender), _arbitrator, _deadline, _goal, _contribCompPct, _sponsorCompPct, _title);
+        DAC dac = (new DAC){value: msg.value}
+            (payable(msg.sender),
+            _arbitrator,
+            _deadline,
+            _goal,
+            _contribCompPct,
+            _sponsorCompPct,
+            _title
+        );
         
         deployedContracts.push(dac);
         emit NewDAC(address(dac));

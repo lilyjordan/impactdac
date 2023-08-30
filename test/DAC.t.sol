@@ -41,7 +41,7 @@ contract DACTest is Test {
         sponsorCompPct = 10;
 
         DACFactory factory = new DACFactory();
-        uint256 sponsorFund = goal * (100 + contribCompPct) / 100;
+        uint256 sponsorFund = goal * contribCompPct / 100;
         vm.expectEmit(true, false, false, false);
         vm.prank(sponsor);
         /*
@@ -77,7 +77,11 @@ contract DACTest is Test {
       dac.contribute{ value: amount2 }();
       vm.stopPrank();
 
-      assertEq(address(dac).balance, 11 ether);
+      // We need 11 total ETH: 10 for the goal and 1 to compensate
+      // the sponsor `sponsorCompPct * goal` (here 10%).
+      // (The sponsor also gets their `contribCompPct * goal` back,
+      // here 5%.)
+      assertEq(address(dac).balance, 11.5 ether);
       assertEq(contributors[0].balance, balanceInitial0 - amount0);
       assertEq(contributors[1].balance, balanceInitial1 - amount1);
       assertEq(contributors[2].balance, balanceInitial2 - amount2);
@@ -91,6 +95,7 @@ contract DACTest is Test {
         uint256 founderBalanceInitial = founder.balance;
 
         uint256 sponsorComp = goal * sponsorCompPct / 100;
+        uint256 contribComp = goal * contribCompPct / 100;
 
         vm.startPrank(contributors[0]);
         // We'll just have this contributor fully fund the project
@@ -106,7 +111,10 @@ contract DACTest is Test {
         
         // Everyone should have the right balances at the end
         assertEq(contributors[0].balance, contribBalanceInitial - (goal + sponsorComp));
-        assertEq(sponsor.balance, sponsorBalanceInitial + sponsorComp);
+        // Sponsor gets their contribComp deposit back since it didn't have to
+        // pay out
+        assertEq(sponsor.balance, sponsorBalanceInitial + contribComp +
+                 sponsorComp);
         assertEq(founder.balance, founderBalanceInitial + goal);
     }
 
