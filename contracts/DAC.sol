@@ -32,7 +32,7 @@ contract DAC {
         // TODO validate that this isn't the zero address
         deadline = _deadline;
         // TODO validate that this isn't in the past
-        goal = _goal * 1e18;  // it's specified in ETH so we convert it to WEI
+        goal = _goal;
         contribCompPct = _contribCompPct;
         // TODO validate that this is in [0, 100)
         sponsorCompPct = _sponsorCompPct;
@@ -107,6 +107,9 @@ contract DAC {
 }
 
 contract DACFactory {
+    event NewDAC(address indexed newDACAddress);
+    DAC[] public deployedContracts;
+
     function createDAC(
         address _arbitrator,
         uint256 _deadline,
@@ -115,10 +118,17 @@ contract DACFactory {
         uint256 _sponsorCompPct,
         string memory _title
     ) public payable returns (DAC) {
-        console.log('value:', msg.value);
-        require(msg.value >= (_goal * (100 + _contribCompPct) * 1e18) / 100, "Insufficient sponsor fund");
-        require(msg.value <= (_goal * (100 + _contribCompPct) * 1e18) / 100, "Overfunded");
+        require(msg.value >= (_goal * (100 + _contribCompPct)) / 100, "Insufficient sponsor fund");
+        require(msg.value <= (_goal * (100 + _contribCompPct)) / 100, "Overfunded");
+        
         DAC dac = new DAC(payable(msg.sender), _arbitrator, _deadline, _goal, _contribCompPct, _sponsorCompPct, _title);
+        
+        deployedContracts.push(dac);
+        emit NewDAC(address(dac));
         return dac;
+    }
+
+    function getContracts() public view returns (DAC[] memory) {
+        return deployedContracts;
     }
 }
