@@ -103,8 +103,7 @@ export class App extends React.Component<{}, AppState> {
     if (!this.provider) {
       return;
     }
-    const code = await this.provider.getCode(this.DACFactoryAddress!);
-    let contracts = await this.DACFactory.getContracts(this.state.selectedAddress);
+    let contracts = await this.DACFactory.getContracts();
     this.setState({DACs: contracts});
   }
 
@@ -113,12 +112,9 @@ export class App extends React.Component<{}, AppState> {
   }
 
   _connectWallet = async () => {
-    console.log('connecting wallet')
     window.ethereum.request({ method: 'eth_requestAccounts' }).then(async (addresses: string[]) => {
       this.setState({selectedAddress: addresses[0]});
-      console.log(`addr: ${addresses[0]}`)
       const balance = await this.provider!.getBalance(addresses[0]);
-      console.log(`balance: ${balance}`);
     });
     if (!this._checkNetwork()) {
       return;
@@ -158,24 +154,22 @@ export class App extends React.Component<{}, AppState> {
       if (!this.DACFactory) {
         throw new Error('DACFactory is not initialized');
       }
-      console.log(`_goal: ${form.goal}`);
-      console.log(`_contribCompPct: ${form.contribCompPct}`);
-      console.log('test:', 100 * (100 + 5) / 100);
-      console.log('test2:', (100 * (100 + 5) / 100).toString());
-      console.log(`value in ETH: ${(form.goal * (100 + form.contribCompPct) / 100).toString()}`);
-      console.log(typeof form.goal);
-      console.log(typeof form.contribCompPct);
-      const value = ethers.parseEther((form.goal * (100 + form.contribCompPct) / 100).toString());
-      console.log(`value: ${value}`)
-      let transaction = await this.DACFactory.createDAC(form.arbitrator, form.deadline, form.goal, form.contribCompPct,
-          form.sponsorCompPct, form.title, {
-          value: value
-      });
+      const val = ethers.parseEther((form.goal * form.contribCompPct / 100).toString());
+      let transaction = await this.DACFactory.createDAC(
+          form.arbitrator,
+          form.deadline,
+          ethers.parseEther(form.goal.toString()),
+          form.contribCompPct,
+          form.sponsorCompPct,
+          form.title,
+          {value: val}
+      );
       let receipt = await transaction.wait();
-      let dacAddress = receipt.events[0].args[0]; // get the address of the new DAC
+
+      const nonce = await this.provider!.getTransactionCount(this.DACFactoryAddress!, 'latest');
+      const dacAddress = ethers.getCreateAddress({ from: this.DACFactoryAddress!, nonce: nonce });
       let dac = new ethers.Contract(dacAddress, DACArtifact.abi, this.signer);
-      console.log('created dac:');
-      console.log(dac);
+      this._updateContracts();
       return dac;
   }
 
