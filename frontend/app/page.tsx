@@ -6,9 +6,10 @@ import { ethers } from "ethers";
 import DACArtifact from '../artifacts/DAC.sol/DAC.json';
 import DACFactoryArtifact from '../artifacts/DAC.sol/DACFactory.json';
 import dynamic from 'next/dynamic';
-import { CreateDACForm, SubmittedCreateDACForm, ContributeForm,
+import { DACProperties, RequiredDACProperties, ContributeForm,
   ApprovePayoutForm, RefundForm, ClaimCompForm, AppState,
   Network } from './types';
+import { Contract } from './contract';
 
 const NETWORK_IDS: Network = {
   hardhat: '31337',
@@ -48,11 +49,17 @@ export class App extends React.Component<{}, AppState> {
     transactionError: undefined,
     networkError: undefined,
     formCreateDAC: {
-      arbitrator: undefined,
-      deadline: undefined,
-      goal: undefined,
-      contribCompPct: undefined,
-      sponsorCompPct: undefined,
+      // arbitrator: undefined,
+      // deadline: undefined,
+      // goal: undefined,
+      // contribCompPct: undefined,
+      // sponsorCompPct: undefined,
+      // title: undefined,
+      arbitrator: '0xE57bFE9F44b819898F47BF37E5AF72a0783e1141',
+      deadline: 1687669795,
+      goal: 10,
+      contribCompPct: 5,
+      sponsorCompPct: 10,
       title: undefined,
     },
     formContribute: {
@@ -75,7 +82,8 @@ export class App extends React.Component<{}, AppState> {
 
   constructor(props: {}) {
     super(props);
-    this._initializeEthers().then(this._connectWallet);
+    this._initializeEthers()
+    .then(this._connectWallet);
   }
 
   async _initializeEthers() {
@@ -93,6 +101,9 @@ export class App extends React.Component<{}, AppState> {
       );
 
       return this.DACFactory.waitForDeployment();
+    })
+    .then(() => {
+      this._updateContracts();
     });
   }
 
@@ -128,7 +139,7 @@ export class App extends React.Component<{}, AppState> {
       window.ethereum.request({ method: 'eth_requestAccounts' }).then((addr: string) => this.setState({selectedAddress: addr}));
     });
     
-    window.ethereum.on("chainChanged", ([chainId]: [string]) => {
+    this.provider!.on("network", ([chainId]: [string]) => {
       this._resetState();
     });
   }
@@ -150,7 +161,7 @@ export class App extends React.Component<{}, AppState> {
   }
 
   // Function to create a new DAC
-  createDAC = async (form : SubmittedCreateDACForm) => {
+  createDAC = async (form : RequiredDACProperties) => {
       if (!this.DACFactory) {
         throw new Error('DACFactory is not initialized');
       }
@@ -198,7 +209,7 @@ export class App extends React.Component<{}, AppState> {
   }
 
   handleCreateDACChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const name = event.target.name as keyof CreateDACForm;
+    const name = event.target.name as keyof DACProperties;
     let value: string | number | null = event.target.value;
   
     if (typeof this.state.formCreateDAC[name] === 'number' || this.state.formCreateDAC[name] === null) {
@@ -209,11 +220,11 @@ export class App extends React.Component<{}, AppState> {
 
   }
 
-  isFormValid = (form: CreateDACForm): form is SubmittedCreateDACForm => {
+  isFormValid = (form: DACProperties): form is RequiredDACProperties => {
     return !Object.values(form).some(value => value === undefined);
   };
 
-  parseCreateDACForm = (form: SubmittedCreateDACForm): SubmittedCreateDACForm => {
+  parseDACProperties = (form: RequiredDACProperties): RequiredDACProperties => {
     return {
       arbitrator: form.arbitrator,
       deadline: Number(form.deadline),
@@ -228,7 +239,7 @@ export class App extends React.Component<{}, AppState> {
     event.preventDefault();
     try {
       if (this.isFormValid(this.state.formCreateDAC)) {
-        const parsedForm = this.parseCreateDACForm(this.state.formCreateDAC);
+        const parsedForm = this.parseDACProperties(this.state.formCreateDAC);
         await this.createDAC(parsedForm);
       } else {
         alert('fill out all fields');
@@ -263,28 +274,32 @@ export class App extends React.Component<{}, AppState> {
   }
 
   render() {
+    const dacs = this.state.DACs.map(
+      (address, index) => <Contract address={address} signer={this.signer!}></Contract>
+    );
+
     return (
       <div>
           <div className="m-4">
             <h1>DACFactoryAddress: {this.DACFactoryAddress}</h1>
             <div>
               <h2>contracts:</h2>
-              {this.state.DACs}
+              {dacs}
             </div>
             <h1>Create DAC</h1>
-            <form id="createDACForm" onSubmit={this.handleCreateDACSubmit}>
+            <form id="DACProperties" onSubmit={this.handleCreateDACSubmit}>
                 <label htmlFor="arbitrator">Arbitrator:</label><br />
-                <input type="text" id="arbitrator" name="arbitrator" onChange={this.handleCreateDACChange}/><br />
+                <input type="text" id="arbitrator" value={this.state.formCreateDAC.arbitrator} name="arbitrator" onChange={this.handleCreateDACChange}/><br />
                 <label htmlFor="deadline">Deadline:</label><br />
-                <input type="number" id="deadline" name="deadline" onChange={this.handleCreateDACChange}/><br />
+                <input type="number" id="deadline" value={this.state.formCreateDAC.deadline} name="deadline" onChange={this.handleCreateDACChange}/><br />
                 <label htmlFor="goal">Goal:</label><br />
-                <input type="number" id="goal" name="goal" onChange={this.handleCreateDACChange}/><br />
+                <input type="number" id="goal" value={this.state.formCreateDAC.goal} name="goal" onChange={this.handleCreateDACChange}/><br />
                 <label htmlFor="contribCompPct">Contributor Compensation Percent:</label><br />
-                <input type="number" id="contribCompPct" name="contribCompPct" onChange={this.handleCreateDACChange}/><br />
+                <input type="number" id="contribCompPct" value={this.state.formCreateDAC.contribCompPct} name="contribCompPct" onChange={this.handleCreateDACChange}/><br />
                 <label htmlFor="sponsorCompPct">Sponsor Compensation Percent:</label><br />
-                <input type="number" id="sponsorCompPct" name="sponsorCompPct" onChange={this.handleCreateDACChange}/><br />
+                <input type="number" id="sponsorCompPct" value={this.state.formCreateDAC.sponsorCompPct} name="sponsorCompPct" onChange={this.handleCreateDACChange}/><br />
                 <label htmlFor="title">Title:</label><br />
-                <input type="text" id="title" name="title" onChange={this.handleCreateDACChange}/><br />
+                <input type="text" id="title" value={this.state.formCreateDAC.title} name="title" onChange={this.handleCreateDACChange}/><br />
                 <input className="text-green-500" type="submit" value="Create" />
             </form>
           </div>

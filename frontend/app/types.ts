@@ -1,4 +1,4 @@
-export type CreateDACForm = {
+export type DACProperties = {
   arbitrator?: string;
   deadline?: number;
   goal?: number;
@@ -7,7 +7,7 @@ export type CreateDACForm = {
   title?: string;
 };
 
-export type SubmittedCreateDACForm = Required<CreateDACForm>;
+export type RequiredDACProperties = Required<DACProperties>;
 
 export type ContributeForm = {
   dacAddress: string;
