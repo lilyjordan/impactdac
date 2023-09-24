@@ -55,8 +55,8 @@ export class Contract extends React.Component<
       sponsorCompPct, title, sponsor, fundingState } = this.state;
 
     return (
-      <div>
-        <h1>{title}</h1>
+      <div className="bg-gray-800 m-8 p-4 rounded-lg text-white">
+        <h2 className="test-class">{title}</h2>
         address: {this.props.address}
         sponsor: {sponsor}
         arbitrator: {arbitrator}
