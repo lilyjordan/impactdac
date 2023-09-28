@@ -2,6 +2,7 @@ import React from 'react';
 import { ethers } from "ethers";
 import { DACProperties } from './types';
 import DACArtifact from '../artifacts/DAC.sol/DAC.json';
+import Enums from '../public/enum_definitions.json';
 
 
 export class Contract extends React.Component<
@@ -37,6 +38,7 @@ export class Contract extends React.Component<
     const sponsorCompPct = await contract.sponsorCompPct();
     const title = await contract.title();
     const fundingState = await contract.state();
+    console.log('deadline:', deadline);
 
     this.setState({
       sponsor,
@@ -57,14 +59,28 @@ export class Contract extends React.Component<
     return (
       <div className="bg-gray-800 m-8 p-4 rounded-lg text-white">
         <h2 className="test-class">{title}</h2>
-        address: {this.props.address}
-        sponsor: {sponsor}
-        arbitrator: {arbitrator}
-        deadline: {deadline}
-        goal: {goal}
-        contribCompPct: {contribCompPct}
-        sponsorCompPct: {sponsorCompPct}
-        state: {fundingState}
+        <div>
+          address: {this.props.address}
+        </div>
+        <div>
+          sponsor: {sponsor}
+        </div>
+        <div>
+          arbitrator: {arbitrator}
+        </div>
+        <div>
+          deadline: {deadline?.toString()}
+        </div>
+        <div>
+          goal: {goal?.toString()}
+        </div>
+        <div>
+          refund bonus: {contribCompPct?.toString()}
+        </div>
+        <div>
+          sponsor fee: {sponsorCompPct?.toString()}
+        </div>
+        state: {fundingState !== undefined ? Enums.State[Number(fundingState) as unknown as keyof typeof Enums.State].toString() : ''}
       </div>
     )
   }
