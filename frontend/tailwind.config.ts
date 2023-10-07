@@ -8,11 +8,13 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      backgroundImage: {
-        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic':
-          'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-      },
+      colors: {
+        'goldenrod-lightest': '#f9dcaf',
+        'goldenrod-lighter': '#ffce83',
+        'goldenrod-md': '#f4b455',
+        'goldenrod-darker': '#b78437',
+        'goldenrod-darkest': '#885a14'
+      }
     },
   },
   plugins: [],

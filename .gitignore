@@ -17,4 +17,7 @@ remappings.txt
 *.db
 
 # Artifacts
-frontend/artifacts/*
+frontend/artifacts/
+
+frontend/public/enum_definitions.json
+frontend/public/run-latest.json

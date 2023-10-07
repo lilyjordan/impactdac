@@ -57,8 +57,8 @@ export class Contract extends React.Component<
       sponsorCompPct, title, sponsor, fundingState } = this.state;
 
     return (
-      <div className="bg-gray-800 m-8 p-4 rounded-lg text-white">
-        <h2 className="test-class">{title}</h2>
+      <div className="bg-goldenrod-lighter m-8 p-4 rounded-lg text-black max-w-md h-64">
+        <h2 className="text-4xl font-bold">{title}</h2>
         <div>
           address: {this.props.address}
         </div>
@@ -81,6 +81,9 @@ export class Contract extends React.Component<
           sponsor fee: {sponsorCompPct?.toString()}
         </div>
         state: {fundingState !== undefined ? Enums.State[Number(fundingState) as unknown as keyof typeof Enums.State].toString() : ''}
+        <div>
+          Pledge
+        </div>
       </div>
     )
   }

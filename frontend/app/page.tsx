@@ -282,8 +282,7 @@ export class App extends React.Component<{}, AppState> {
       <div>
           <div className="m-4">
             <h1>DACFactoryAddress: {this.DACFactoryAddress}</h1>
-            <div>
-              <h2>contracts:</h2>
+            <div className="flex flex-wrap w-[80%] bg-goldenrod-darker">
               {dacs}
             </div>
             <h1>Create DAC</h1>
@@ -305,13 +304,13 @@ export class App extends React.Component<{}, AppState> {
           </div>
   
           <div className="m-4">
-            <h1>Contribute to DAC</h1>
+            <h1>Pledge</h1>
             <form id="contributeForm">
                 <label htmlFor="dacAddress">DAC Address:</label><br />
                 <input type="text" id="dacAddress" name="dacAddress" /><br />
                 <label htmlFor="amount">Amount:</label><br />
                 <input type="text" id="amount" name="amount" /><br />
-                <input className="text-green-500" type="submit" value="Contribute" />
+                <input className="text-green-500" type="submit" value="Pledge" />
             </form>
           </div>
   
