@@ -1,16 +1,16 @@
 import React from 'react';
 import { ethers } from "ethers";
-import { DACProperties } from './types';
+import { ContractState } from './types';
 import DACArtifact from '../artifacts/DAC.sol/DAC.json';
 import Enums from '../public/enum_definitions.json';
 
 
 export class Contract extends React.Component<
   {address: string; signer: ethers.Signer},
-  DACProperties & {sponsor?: string} & {fundingState?: string}
+  ContractState
 > {
 
-  private initialState: DACProperties & {sponsor?: string} & {fundingState?: string} = {
+  private initialState: ContractState = {
     arbitrator: undefined,
     deadline: undefined,
     goal: undefined,
@@ -18,7 +18,8 @@ export class Contract extends React.Component<
     sponsorCompPct: undefined,
     title: undefined,
     sponsor: undefined,
-    fundingState: undefined
+    fundingState: undefined,
+    amountPledged: undefined
   };
 
   state = this.initialState;
@@ -38,7 +39,8 @@ export class Contract extends React.Component<
     const sponsorCompPct = await contract.sponsorCompPct();
     const title = await contract.title();
     const fundingState = await contract.state();
-    console.log('deadline:', deadline);
+    const amountPledged = await contract.totalContributions();
+    console.log('amountPledged:', amountPledged);
 
     this.setState({
       sponsor,
@@ -48,39 +50,32 @@ export class Contract extends React.Component<
       contribCompPct,
       sponsorCompPct,
       title,
-      fundingState
+      fundingState,
+      amountPledged
     });
   }
 
   render() {
     const { arbitrator, deadline, goal, contribCompPct,
-      sponsorCompPct, title, sponsor, fundingState } = this.state;
+      sponsorCompPct, title, sponsor, fundingState, amountPledged } = this.state;
 
     return (
-      <div className="bg-goldenrod-lighter m-8 p-4 rounded-lg text-black max-w-md h-64">
+      <div className="bg-goldenrod-lighter m-8 p-4 rounded-lg text-black max-w-sm h-64">
         <h2 className="text-4xl font-bold">{title}</h2>
         <div>
-          address: {this.props.address}
+          Sponsor <span className="font-bold">{sponsor}</span>
         </div>
         <div>
-          sponsor: {sponsor}
+          <span className="font-bold">{amountPledged?.toString()}</span> of <span
+            className="font-bold">{goal ? ethers.formatEther(goal) : '?'} ETH</span> by <span
+            className="font-bold">{deadline ? new Date(Number(deadline) * 1000).toLocaleDateString() : '?'}</span>
         </div>
         <div>
-          arbitrator: {arbitrator}
+          Refund bonus <span className="font-bold">{contribCompPct?.toString()}</span>
         </div>
         <div>
-          deadline: {deadline?.toString()}
+          Sponsor fee: <span className="font-bold">{sponsorCompPct?.toString()}</span>
         </div>
-        <div>
-          goal: {goal?.toString()}
-        </div>
-        <div>
-          refund bonus: {contribCompPct?.toString()}
-        </div>
-        <div>
-          sponsor fee: {sponsorCompPct?.toString()}
-        </div>
-        state: {fundingState !== undefined ? Enums.State[Number(fundingState) as unknown as keyof typeof Enums.State].toString() : ''}
         <div>
           Pledge
         </div>

@@ -281,8 +281,9 @@ export class App extends React.Component<{}, AppState> {
     return (
       <div>
           <div className="m-4">
-            <h1>DACFactoryAddress: {this.DACFactoryAddress}</h1>
-            <div className="flex flex-wrap w-[80%] bg-goldenrod-darker">
+            <h1>Retroflex</h1>
+            <h3>DACFactoryAddress: {this.DACFactoryAddress}</h3>
+            <div className="flex flex-wrap w-[80%] mx-auto bg-goldenrod-darker">
               {dacs}
             </div>
             <h1>Create DAC</h1>
