@@ -9,7 +9,7 @@ export type DACProperties = {
 
 export type RequiredDACProperties = Required<DACProperties>;
 
-type ContractState = DACProperties & {sponsor?: string} & {fundingState?: string} & {amountPledged?: number};
+export type ContractState = DACProperties & {sponsor?: string} & {fundingState?: string} & {amountPledged?: number};
 
 export type ContributeForm = {
   dacAddress: string;
