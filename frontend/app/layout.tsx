@@ -17,7 +17,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body className={inter.className}>
+        <header className='p-6 text-3xl font-bold'>Retroflex</header>
+        <div className='m-8'>
+          {children}
+        </div>
+      </body>
     </html>
   )
 }

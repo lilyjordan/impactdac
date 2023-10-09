@@ -8,8 +8,10 @@ import DACFactoryArtifact from '../artifacts/DAC.sol/DACFactory.json';
 import dynamic from 'next/dynamic';
 import { DACProperties, RequiredDACProperties, ContributeForm,
   ApprovePayoutForm, RefundForm, ClaimCompForm, AppState,
-  Network } from './types';
-import { Contract } from './contract';
+  Network } from '../app/types';
+import { Contract } from '../app/components/contract';
+import Link from 'next/link';
+
 
 const NETWORK_IDS: Network = {
   hardhat: '31337',
@@ -35,7 +37,7 @@ declare global {
 
 const network: keyof Network | undefined = process.env.NEXT_PUBLIC_NETWORK;
 
-export class App extends React.Component<{}, AppState> {
+export class Home extends React.Component<{}, AppState> {
   private provider?: ethers.BrowserProvider;
   private signer?: ethers.Signer;
   private DACFactory?: ethers.Contract;
@@ -160,29 +162,6 @@ export class App extends React.Component<{}, AppState> {
     return false;
   }
 
-  // Function to create a new DAC
-  createDAC = async (form : RequiredDACProperties) => {
-      if (!this.DACFactory) {
-        throw new Error('DACFactory is not initialized');
-      }
-      const val = ethers.parseEther((form.goal * form.contribCompPct / 100).toString());
-      let transaction = await this.DACFactory.createDAC(
-          form.arbitrator,
-          form.deadline,
-          ethers.parseEther(form.goal.toString()),
-          form.contribCompPct,
-          form.sponsorCompPct,
-          form.title,
-          {value: val}
-      );
-      let receipt = await transaction.wait();
-
-      const nonce = await this.provider!.getTransactionCount(this.DACFactoryAddress!, 'latest');
-      const dacAddress = ethers.getCreateAddress({ from: this.DACFactoryAddress!, nonce: nonce });
-      let dac = new ethers.Contract(dacAddress, DACArtifact.abi, this.signer);
-      this._updateContracts();
-      return dac;
-  }
 
   // Function to contribute to the DAC
   async contribute(dac: ethers.Contract, amount: number) {
@@ -206,47 +185,6 @@ export class App extends React.Component<{}, AppState> {
   async claimUnowedContribComp(dac: ethers.Contract) {
       let transaction = await dac.claimUnowedContribComp();
       await transaction.wait();
-  }
-
-  handleCreateDACChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const name = event.target.name as keyof DACProperties;
-    let value: string | number | null = event.target.value;
-  
-    if (typeof this.state.formCreateDAC[name] === 'number' || this.state.formCreateDAC[name] === null) {
-      value = Number(value);
-    }
-
-    this.setState({ formCreateDAC: { ...this.state.formCreateDAC, [name]: value } });
-
-  }
-
-  isFormValid = (form: DACProperties): form is RequiredDACProperties => {
-    return !Object.values(form).some(value => value === undefined);
-  };
-
-  parseDACProperties = (form: RequiredDACProperties): RequiredDACProperties => {
-    return {
-      arbitrator: form.arbitrator,
-      deadline: Number(form.deadline),
-      goal: Number(form.goal),
-      contribCompPct: Number(form.contribCompPct),
-      sponsorCompPct: Number(form.sponsorCompPct),
-      title: form.title
-    };
-  };
-  
-  handleCreateDACSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    try {
-      if (this.isFormValid(this.state.formCreateDAC)) {
-        const parsedForm = this.parseDACProperties(this.state.formCreateDAC);
-        await this.createDAC(parsedForm);
-      } else {
-        alert('fill out all fields');
-      }
-    } catch (error) {
-      console.error(error);
-    }
   }
 
   handleContributeChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -286,24 +224,12 @@ export class App extends React.Component<{}, AppState> {
             <div className="flex flex-wrap w-[80%] mx-auto bg-goldenrod-darker">
               {dacs}
             </div>
-            <h1>Create DAC</h1>
-            <form id="DACProperties" onSubmit={this.handleCreateDACSubmit}>
-                <label htmlFor="arbitrator">Arbitrator:</label><br />
-                <input type="text" id="arbitrator" value={this.state.formCreateDAC.arbitrator} name="arbitrator" onChange={this.handleCreateDACChange}/><br />
-                <label htmlFor="deadline">Deadline:</label><br />
-                <input type="number" id="deadline" value={this.state.formCreateDAC.deadline} name="deadline" onChange={this.handleCreateDACChange}/><br />
-                <label htmlFor="goal">Goal:</label><br />
-                <input type="number" id="goal" value={this.state.formCreateDAC.goal} name="goal" onChange={this.handleCreateDACChange}/><br />
-                <label htmlFor="contribCompPct">Contributor Compensation Percent:</label><br />
-                <input type="number" id="contribCompPct" value={this.state.formCreateDAC.contribCompPct} name="contribCompPct" onChange={this.handleCreateDACChange}/><br />
-                <label htmlFor="sponsorCompPct">Sponsor Compensation Percent:</label><br />
-                <input type="number" id="sponsorCompPct" value={this.state.formCreateDAC.sponsorCompPct} name="sponsorCompPct" onChange={this.handleCreateDACChange}/><br />
-                <label htmlFor="title">Title:</label><br />
-                <input type="text" id="title" value={this.state.formCreateDAC.title} name="title" onChange={this.handleCreateDACChange}/><br />
-                <input className="text-green-500" type="submit" value="Create" />
-            </form>
           </div>
-  
+          <Link href='/sponsor'>
+            <div className="bg-goldenrod-darker hover:bg-goldenrod-darkest text-goldenrod-lightest font-bold py-2 px-4 rounded w-44">
+              Sponsor a Bounty
+            </div>
+          </Link>
           <div className="m-4">
             <h1>Pledge</h1>
             <form id="contributeForm">
@@ -348,7 +274,7 @@ export class App extends React.Component<{}, AppState> {
   }
 }
 
-const NoSSRApp = dynamic(() => Promise.resolve(App), { ssr: false });
+const NoSSRApp = dynamic(() => Promise.resolve(Home), { ssr: false });
 
 function Page() {
   return <NoSSRApp />;
