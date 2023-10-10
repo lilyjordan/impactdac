@@ -261,17 +261,21 @@ export class Home extends React.Component<{}, AppState> {
   }
 
   render() {
-    const dacs = this.state.contracts.map(
-      (address, index) => <ContractCard address={address} signer={this.signer!}
-        openContractModal={this.openContractModal}/>
-    );
+    const contracts = Object.entries(this.state.contracts).map(([key, value]) => (
+        <ContractCard
+          key={key}
+          contractData={value}
+          signer={this.signer!}
+          openContractModal={this.openContractModal}
+        />
+    ));
 
     return (
       <div>
           <div className="m-4">
             <h3>DACFactoryAddress: {this.DACFactoryAddress}</h3>
             <div className="flex flex-wrap w-[80%] mx-auto bg-goldenrod-darker">
-              {dacs}
+              {contracts}
             </div>
           </div>
           {this.state.showSponsorModal && (
