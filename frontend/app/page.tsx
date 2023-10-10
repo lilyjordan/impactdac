@@ -1,15 +1,15 @@
-import logo from './logo.svg';
-'use client'  // wtf
+'use client'
 
 import React from 'react';
 import { ethers } from "ethers";
-import DACArtifact from '../artifacts/DAC.sol/DAC.json';
 import DACFactoryArtifact from '../artifacts/DAC.sol/DACFactory.json';
+import DACArtifact from '../artifacts/DAC.sol/DAC.json';
 import dynamic from 'next/dynamic';
-import { DACProperties, RequiredDACProperties, ContributeForm,
-  ApprovePayoutForm, RefundForm, ClaimCompForm, AppState,
-  Network } from '../app/types';
-import { Contract } from '../app/components/contract';
+import { ContributeForm, ApprovePayoutForm, RefundForm,
+  ClaimCompForm, AppState, Network, ContractData } from './types';
+import { ContractCard } from './components/ContractCard';
+import { SponsorModal } from './components/SponsorModal';
+import { ContractModal } from './components/ContractModal';
 import Link from 'next/link';
 
 
@@ -45,25 +45,11 @@ export class Home extends React.Component<{}, AppState> {
 
   private initialState: AppState = {
     selectedAddress: undefined,
-    DACs: [],
+    contracts: {},
     txBeingSent: undefined,
     messageDuringTx: undefined,
     transactionError: undefined,
     networkError: undefined,
-    formCreateDAC: {
-      // arbitrator: undefined,
-      // deadline: undefined,
-      // goal: undefined,
-      // contribCompPct: undefined,
-      // sponsorCompPct: undefined,
-      // title: undefined,
-      arbitrator: '0xE57bFE9F44b819898F47BF37E5AF72a0783e1141',
-      deadline: 1687669795,
-      goal: 10,
-      contribCompPct: 5,
-      sponsorCompPct: 10,
-      title: undefined,
-    },
     formContribute: {
       dacAddress: "",
       amount: "",
@@ -78,6 +64,8 @@ export class Home extends React.Component<{}, AppState> {
     formClaimComp: {
       dacAddressClaim: "",
     },
+    showSponsorModal: false,
+    activeContractModal: null
   };
 
   state = this.initialState;
@@ -97,10 +85,10 @@ export class Home extends React.Component<{}, AppState> {
         this.DACFactoryAddress = json.transactions[0].contractAddress;
 
         this.DACFactory = new ethers.Contract(
-        this.DACFactoryAddress!,
-        DACFactoryArtifact.abi,
-        this.signer
-      );
+          this.DACFactoryAddress!,
+          DACFactoryArtifact.abi,
+          this.signer
+        );
 
       return this.DACFactory.waitForDeployment();
     })
@@ -116,8 +104,42 @@ export class Home extends React.Component<{}, AppState> {
     if (!this.provider) {
       return;
     }
-    let contracts = await this.DACFactory.getContracts();
-    this.setState({DACs: contracts});
+    let contractAddresses = await this.DACFactory.getContracts();
+    let newContracts: { [key: string]: ContractData } = {};
+    for (const addr of contractAddresses) {
+      if (this.state.contracts.hasOwnProperty(addr)) {
+        newContracts[addr] = this.state.contracts[addr];
+      } else {
+        const c = new ethers.Contract(
+          addr,
+          DACArtifact.abi,
+          this.signer
+        );
+        const sponsor = await c.sponsor();
+        const arbitrator = await c.arbitrator();
+        const deadline = await c.deadline();
+        const goal = await c.goal();
+        const contribCompPct = await c.contribCompPct();
+        const sponsorCompPct = await c.sponsorCompPct();
+        const title = await c.title();
+        const fundingState = await c.state();
+        const amountPledged = await c.totalContributions();
+        newContracts[addr] = {
+          contract: c,
+          address: addr,
+          sponsor: sponsor,
+          arbitrator: arbitrator,
+          deadline: deadline,
+          goal: goal,
+          contribCompPct: contribCompPct,
+          sponsorCompPct: sponsorCompPct,
+          title: title,
+          fundingState: fundingState,
+          amountPledged: amountPledged
+        }
+      }
+    }
+    this.setState({contracts: newContracts});
   }
 
   _resetState() {
@@ -160,6 +182,33 @@ export class Home extends React.Component<{}, AppState> {
     });
 
     return false;
+  }
+
+
+  toggleSponsorModal = () => {
+    this.setState({ showSponsorModal: !this.state.showSponsorModal });
+  };
+
+
+  openContractModal = (addr: string) => {
+    this.setState({ activeContractModal: addr });
+  };
+
+
+  closeContractModal = () => {
+    this.setState({ activeContractModal: null })
+  }
+
+
+  handleDACCreated = () => {
+    this.toggleSponsorModal();
+    this._updateContracts();
+  }
+
+
+  handlePledgeAdded = () => {
+    this.closeContractModal();
+    this._updateContracts();
   }
 
 
@@ -212,34 +261,44 @@ export class Home extends React.Component<{}, AppState> {
   }
 
   render() {
-    const dacs = this.state.DACs.map(
-      (address, index) => <Contract address={address} signer={this.signer!}></Contract>
+    const dacs = this.state.contracts.map(
+      (address, index) => <ContractCard address={address} signer={this.signer!}
+        openContractModal={this.openContractModal}/>
     );
 
     return (
       <div>
           <div className="m-4">
-            <h1>Retroflex</h1>
             <h3>DACFactoryAddress: {this.DACFactoryAddress}</h3>
             <div className="flex flex-wrap w-[80%] mx-auto bg-goldenrod-darker">
               {dacs}
             </div>
           </div>
-          <Link href='/sponsor'>
-            <div className="bg-goldenrod-darker hover:bg-goldenrod-darkest text-goldenrod-lightest font-bold py-2 px-4 rounded w-44">
+          {this.state.showSponsorModal && (
+            <SponsorModal
+              DACFactory={this.DACFactory}
+              DACFactoryAddress={this.DACFactoryAddress}
+              provider={this.provider}
+              signer={this.signer}
+              onDACCreated={this.handleDACCreated}
+              onClickX={this.toggleSponsorModal}
+            />
+          )}
+          {this.state.activeContractModal && (
+            <ContractModal
+              contractData={this.state.contracts[this.state.activeContractModal]}
+              signer={this.signer!}
+              onPledgeAdded={this.handlePledgeAdded}
+              onClickX={this.closeContractModal}
+            />
+          )}
+          <button onClick={this.toggleSponsorModal}>
+            <div className="bg-goldenrod-darker hover:bg-goldenrod-darkest \
+              text-goldenrod-lightest font-bold py-2 px-4 rounded w-44"
+            >
               Sponsor a Bounty
             </div>
-          </Link>
-          <div className="m-4">
-            <h1>Pledge</h1>
-            <form id="contributeForm">
-                <label htmlFor="dacAddress">DAC Address:</label><br />
-                <input type="text" id="dacAddress" name="dacAddress" /><br />
-                <label htmlFor="amount">Amount:</label><br />
-                <input type="text" id="amount" name="amount" /><br />
-                <input className="text-green-500" type="submit" value="Pledge" />
-            </form>
-          </div>
+          </button>
   
           <div className="m-4">
             <h1>Approve Payout</h1>

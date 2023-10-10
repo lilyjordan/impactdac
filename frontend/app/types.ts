@@ -1,3 +1,6 @@
+import { ethers } from "ethers";
+
+
 export type DACProperties = {
   arbitrator?: string;
   deadline?: number;
@@ -9,7 +12,13 @@ export type DACProperties = {
 
 export type RequiredDACProperties = Required<DACProperties>;
 
-export type ContractState = DACProperties & {sponsor?: string} & {fundingState?: string} & {amountPledged?: number};
+export type ContractData = RequiredDACProperties & {
+  contract: ethers.Contract,
+  address: string;
+  sponsor: string;
+  fundingState: string;
+  amountPledged: number;
+}
 
 export type ContributeForm = {
   dacAddress: string;
@@ -30,17 +39,18 @@ export type ClaimCompForm = {
 };
 
 export type AppState = {
-  formCreateDAC: CreateDACForm;
   formContribute: ContributeForm;
   formApprovePayout: ApprovePayoutForm;
   formRefund: RefundForm;
   formClaimComp: ClaimCompForm;
   selectedAddress?: string;
-  DACs: any[];
+  contracts: { [key: string] : ContractData };
   txBeingSent?: string;
   messageDuringTx?: string;
   transactionError?: string;
   networkError?: string;
+  showSponsorModal: boolean;
+  activeContractModal: string | null;
 }
 
 export type Network = {
