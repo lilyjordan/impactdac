@@ -52,6 +52,7 @@ export class ContractModal extends React.Component<
 
   render() {
     const { contractData, onClose } = this.props;
+    const isExpired = Date.now() > Number(contractData.deadline) * 1000;
 
     return (
       <div
@@ -94,6 +95,7 @@ export class ContractModal extends React.Component<
                 Sponsor <span className="font-bold truncate">{contractData.sponsor}</span>
               </div>
             </div>
+            {!isExpired &&
             <div className="self-end mt-auto flex items-center justify-center">
               <div className="mr-4">
                 <input 
@@ -118,6 +120,7 @@ export class ContractModal extends React.Component<
                 Pledge
               </button>
             </div>
+            }
           </div>
         </div>
       </div>

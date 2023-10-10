@@ -14,13 +14,18 @@ export class ContractCard extends React.Component<
 
   render() {
     const { contractData, openContractModal } = this.props;
+    const isExpired = Date.now() > Number(contractData.deadline) * 1000;
 
     return (
       <div
         className="bg-goldenrod-lighter p-8 rounded-lg text-black \
-          max-w-xs h-80 shadow-lg flex flex-col justify-between cursor-pointer"
+          max-w-xs h-80 shadow-lg flex flex-col justify-between \
+          cursor-pointer text-left relative"
         onClick={() => openContractModal(contractData.address)}
       >
+        {isExpired && (
+          <div className="absolute inset-0 bg-black opacity-25 z-10 rounded-lg" />
+        )}
         <div>
           <div className="flex-none h-18 mb-3">
             <h2 className="text-3xl font-bold">{contractData.title}</h2>
@@ -32,15 +37,15 @@ export class ContractCard extends React.Component<
         <div className="text-sm">
           <div className="truncate">
             <span className="font-bold truncate">
-              {ethers.formatEther(contractData.amountPledged?.toString())}
+              {ethers.formatEther(contractData.amountPledged.toString())}
             </span>
             {' of '}
             <span className="font-bold truncate">
-              {contractData.goal ? ethers.formatEther(contractData.goal) : '?'}
+              {ethers.formatEther(contractData.goal)}
             </span>
             {' ETH by '}
             <span className="font-bold truncate">
-              {contractData.deadline ? new Date(Number(contractData.deadline) * 1000).toLocaleDateString() : '?'}
+              {new Date(Number(contractData.deadline) * 1000).toLocaleDateString()}
             </span>
           </div>
           <div className="truncate">
