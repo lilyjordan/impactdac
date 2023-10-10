@@ -14,6 +14,7 @@ export class ContractModal extends React.Component<
 
   state = {
     pledgeAmount: '0.01',
+    grantee: undefined,
     inputFocused: false
   };
 
@@ -26,7 +27,7 @@ export class ContractModal extends React.Component<
   };
 
 
-  handleChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  handlePledgeAmountChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!/^(0|[1-9]\d*)?(\.\d*)?$/.test(event.target.value)) {
       return;
     }
@@ -37,6 +38,8 @@ export class ContractModal extends React.Component<
   addPledge = async () => {
     const { contractData } = this.props;
     let val;
+    // TODO don't allow pledge higher than the amount remaining. We probably
+    // want to call the contract directly again here to be sure
     try {
       val = ethers.parseEther(this.state.pledgeAmount);
       let transaction = await contractData.contract.contribute(
@@ -50,9 +53,28 @@ export class ContractModal extends React.Component<
   }
 
 
+  handleGranteeChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    this.setState({ grantee: event.target.value });
+  }
+
+
+  approvePayout = async () => {
+    const { contractData } = this.props;
+    if (this.state.grantee) {
+      // TODO validate
+      contractData.contract
+    }
+  }
+
+
   render() {
-    const { contractData, onClose } = this.props;
-    const isExpired = Date.now() > Number(contractData.deadline) * 1000;
+    const { contractData, onClose, signer } = this.props;
+
+    const isFailed = (Date.now() > Number(contractData.deadline) * 1000) &&
+      contractData.amountPledged < contractData.goal;  // TODO adjust for sponsor fee
+    const isFullyFunded = contractData.amountPledged === contractData.goal;  // TODO same
+    // TODO also make very sure that we can't go over the goal
+    // const userIsArbitrator = contractData.arbitrator === signer.getAddress()
 
     return (
       <div
@@ -95,13 +117,13 @@ export class ContractModal extends React.Component<
                 Sponsor <span className="font-bold truncate">{contractData.sponsor}</span>
               </div>
             </div>
-            {!isExpired &&
+            {(!isFailed && !isFullyFunded) &&
             <div className="self-end mt-auto flex items-center justify-center">
               <div className="mr-4">
                 <input 
                   type="string"
                   value={this.state.pledgeAmount}
-                  onChange={this.handleChange}
+                  onChange={this.handlePledgeAmountChange}
                   step="any"
                   onFocus={() => this.setState({ inputFocused: true })}
                   onBlur={this.handleBlur}
@@ -120,6 +142,27 @@ export class ContractModal extends React.Component<
                 Pledge
               </button>
             </div>
+            }
+            {isFullyFunded &&
+              <div className="mr-4">
+                <input 
+                  type="string"
+                  value={this.state.grantee}
+                  onChange={this.handleGranteeChange}
+                  step="any"
+                  onFocus={() => this.setState({ inputFocused: true })}
+                  onBlur={this.handleBlur}
+                  className="border rounded py-1 px-2 mr-2 w-24"
+                  style={{ appearance: 'none' }}
+                />
+                <button
+                  className="bg-goldenrod-darker hover:bg-goldenrod-darkest \
+                    text-goldenrod-lightest font-bold py-2 px-4 rounded ml-2"
+                  onClick={this.approvePayout}
+                >
+                  Approve payout
+                </button>
+              </div>
             }
           </div>
         </div>

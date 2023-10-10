@@ -44,7 +44,7 @@ export class Home extends React.Component<{}, AppState> {
   private DACFactoryAddress?: string
 
   private initialState: AppState = {
-    selectedAddress: undefined,
+    userAddress: undefined,
     contracts: {},
     txBeingSent: undefined,
     messageDuringTx: undefined,
@@ -169,7 +169,7 @@ export class Home extends React.Component<{}, AppState> {
 
   _connectWallet = async () => {
     window.ethereum.request({ method: 'eth_requestAccounts' }).then(async (addresses: string[]) => {
-      this.setState({selectedAddress: addresses[0]});
+      this.setState({userAddress: addresses[0]});
       const balance = await this.provider!.getBalance(addresses[0]);
     });
     if (!this._checkNetwork()) {
@@ -181,7 +181,7 @@ export class Home extends React.Component<{}, AppState> {
         return this._resetState();
       }
       
-      window.ethereum.request({ method: 'eth_requestAccounts' }).then((addr: string) => this.setState({selectedAddress: addr}));
+      window.ethereum.request({ method: 'eth_requestAccounts' }).then((addr: string) => this.setState({userAddress: addr}));
     });
     
     this.provider!.on("network", ([chainId]: [string]) => {
