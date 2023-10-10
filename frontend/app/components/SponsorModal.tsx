@@ -10,14 +10,14 @@ interface SponsorModalProps {
   provider?: ethers.BrowserProvider,
   signer?: ethers.Signer,
   onDACCreated: () => void,
-  onClickX: () => void
+  onClose: () => void
 }
 
 
 export class SponsorModal extends React.Component<
   SponsorModalProps, {}
 > {
-  private initialState: DACProperties = {
+  private initialState: DACProperties & {waiting: boolean} = {
       // arbitrator: undefined,
       // deadline: undefined,
       // goal: undefined,
@@ -25,11 +25,12 @@ export class SponsorModal extends React.Component<
       // sponsorCompPct: undefined,
       // title: undefined,
       arbitrator: '0xE57bFE9F44b819898F47BF37E5AF72a0783e1141',
-      deadline: 1687669795,
+      deadline: 1698669795,
       goal: 10,
       contribCompPct: 5,
       sponsorCompPct: 10,
       title: undefined,
+      waiting: false
   };
 
   state = this.initialState;
@@ -63,13 +64,13 @@ export class SponsorModal extends React.Component<
     };
   };
 
-    
+
   handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     try {
       if (this.isFormValid(this.state)) {
         const parsedForm = this.parseDACProperties(this.state);
-        await this.createDAC(parsedForm);
+        await this.createContract(parsedForm);
       } else {
         alert('Missing fields');
       }
@@ -79,7 +80,7 @@ export class SponsorModal extends React.Component<
   }
 
 
-  createDAC = async (form : RequiredDACProperties) => {
+  createContract = async (form : RequiredDACProperties) => {
     if (!this.props.DACFactory) {
       throw new Error('DACFactory is not initialized');
     }
@@ -93,6 +94,7 @@ export class SponsorModal extends React.Component<
         form.title,
         {value: val}
     );
+    this.setState({waiting: true});
     let receipt = await transaction.wait();
 
     // This extra nonce stuff is in here to check what address the contract got created to
@@ -102,6 +104,7 @@ export class SponsorModal extends React.Component<
     const dacAddress = ethers.getCreateAddress({ from: this.props.DACFactoryAddress!, nonce: nonce });
     let dac = new ethers.Contract(dacAddress, DACArtifact.abi, this.props.signer);
     this.props.onDACCreated();
+    this.setState({waiting: false});
     // // return dac;
     // return 1;
   }
@@ -109,13 +112,19 @@ export class SponsorModal extends React.Component<
 
   render() {
     return (
-      <div className="fixed inset-0 flex items-center justify-center z-50">
-        <div className="relative bg-white rounded-lg p-8">
-          <button className="absolute top-2 left-2 text-gray-500 font-bold"
-            onClick={this.props.onClickX}
-          >
-            X
-          </button>
+      <div
+        className="fixed inset-0 flex items-center justify-center z-50 \\
+          bg-black bg-opacity-50 cursor-pointer"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              this.props.onClose();
+            }
+          }}
+      >
+        <div
+          className="relative rounded-lg p-8 bg-goldenrod-lighter shadow-lg \
+            cursor-auto"
+        >
           <div className='m-4'>
             <h1>Sponsor a bounty</h1>
             <form id="DACProperties" onSubmit={this.handleSubmit}>
@@ -131,7 +140,16 @@ export class SponsorModal extends React.Component<
               <input type="number" id="sponsorCompPct" value={this.state.sponsorCompPct} name="sponsorCompPct" onChange={this.handleChange}/><br />
               <label htmlFor="title">Title:</label><br />
               <input type="text" id="title" value={this.state.title} name="title" onChange={this.handleChange}/><br />
-              <input className="text-green-500" type="submit" value="Create" />
+              {this.state.waiting ?
+                <div className="mt-4">Waiting for transaction...</div> :
+                <input
+                  className="bg-goldenrod-darker hover:bg-goldenrod-darkest \
+                    text-goldenrod-lightest font-bold py-2 px-4 rounded mt-4 \
+                    cursor-pointer"
+                  type="submit"
+                  value="Create"
+                />
+              }
             </form>
           </div>
         </div>

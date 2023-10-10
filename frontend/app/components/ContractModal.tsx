@@ -8,70 +8,101 @@ export class ContractModal extends React.Component<
     contractData: ContractData,
     signer: ethers.Signer,
     onPledgeAdded: () => void,
-    onClickX: () => void
+    onClose: () => void
   }
 > {
 
-  handleChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    // const name = event.target.name as keyof DACProperties;
-    // let value: string | number | null = event.target.value;
-  
-    // if (typeof this.state[name] === 'number' || this.state[name] === null) {
-    //   value = Number(value);
-    // }
+  state = {
+    pledgeAmount: 0.01
+  };
 
-    // this.setState({ ...this.state, [name]: value });
+  handleChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const valueStr: string = event.target.value;
+    const value = Number(valueStr);
+    this.setState({pledgeAmount: value});
   }
 
 
-  // isFormValid = (form: DACProperties): form is RequiredDACProperties => {
-    // return !Object.values(form).some(value => value === undefined);
-  // };
-
-
-  // handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    // event.preventDefault();
-    // try {
-    //   if (this.isFormValid(this.state)) {
-    //     const parsedForm = this.parseDACProperties(this.state);
-    //     await this.createDAC(parsedForm);
-    //   } else {
-    //     alert('Missing fields');
-    //   }
-    // } catch (error) {
-    //   console.error(error);
-    // }
-  // }
+  addPledge = async () => {
+    const { contractData } = this.props;
+    let val;
+    try {
+      val = ethers.parseEther(this.state.pledgeAmount.toString());
+      let transaction = await contractData.contract.contribute(
+        {value: val}
+      );
+      let receipt = await transaction.wait();
+      this.props.onPledgeAdded();
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
 
   render() {
-    const { contractData, onClickX } = this.props;
+    const { contractData, onClose } = this.props;
 
     return (
-      <div className="fixed inset-0 flex items-center justify-center z-50">
-        <div className="relative bg-white rounded-lg p-8">
-          <button className="absolute top-2 left-2 text-gray-500 font-bold"
-            onClick={this.props.onClickX}
-          >
-            X
-          </button>
-          <div className='m-4'>
-            <h1>Sponsor a bounty</h1>
-            <form id="DACProperties" onSubmit={this.handleSubmit}>
-              <label htmlFor="arbitrator">Arbitrator:</label><br />
-              <input type="text" id="arbitrator" value={contractData.arbitrator} name="arbitrator" onChange={this.handleChange}/><br />
-              <label htmlFor="deadline">Deadline:</label><br />
-              <input type="number" id="deadline" value={contractData.deadline} name="deadline" onChange={this.handleChange}/><br />
-              <label htmlFor="goal">Goal:</label><br />
-              <input type="number" id="goal" value={contractData.goal} name="goal" onChange={this.handleChange}/><br />
-              <label htmlFor="contribCompPct">Contributor Compensation Percent:</label><br />
-              <input type="number" id="contribCompPct" value={contractData.contribCompPct} name="contribCompPct" onChange={this.handleChange}/><br />
-              <label htmlFor="sponsorCompPct">Sponsor Compensation Percent:</label><br />
-              <input type="number" id="sponsorCompPct" value={contractData.sponsorCompPct} name="sponsorCompPct" onChange={this.handleChange}/><br />
-              <label htmlFor="title">Title:</label><br />
-              <input type="text" id="title" value={contractData.title} name="title" onChange={this.handleChange}/><br />
-              <input className="text-green-500" type="submit" value="Create" />
-            </form>
+      <div
+        className="fixed inset-0 flex items-center justify-center z-50 \
+          bg-black bg-opacity-50 cursor-pointer"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            this.props.onClose();
+          }
+        }}
+      >
+        <div
+            className="relative bg-goldenrod-lighter m-8 p-8 rounded-lg text-black \
+              max-w-md shadow-lg flex flex-col justify-between cursor-auto"
+        >
+          <div>
+            <div className="flex-none h-18 mb-3">
+              <h2 className="text-3xl font-bold">{contractData.title}</h2>
+            </div>
+            <div className="mb-4">
+              Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+            </div>
+          </div>
+          <div className="text-sm">
+            <div className="mb-4">
+              <div className="truncate">
+                <span className="font-bold truncate">
+                  {contractData.amountPledged?.toString()}
+                </span>
+                {' of '}
+                <span className="font-bold truncate">
+                  {contractData.goal ? ethers.formatEther(contractData.goal) : '?'}
+                </span>
+                {' ETH by '}
+                <span className="font-bold truncate">
+                  {contractData.deadline ? new Date(Number(contractData.deadline) * 1000).toLocaleDateString() : '?'}
+                </span>
+              </div>
+              <div className="truncate">
+                Sponsor <span className="font-bold truncate">{contractData.sponsor}</span>
+              </div>
+            </div>
+            <div className="self-end mt-auto flex items-center justify-center">
+              <div className="mr-4">
+                <input 
+                  type="number"
+                  value={this.state.pledgeAmount}
+                  onChange={this.handleChange}
+                  className="border rounded py-1 px-2 mr-2 w-24"
+                />
+                <span>
+                  ETH
+                </span>
+              </div>
+              <button
+                className="bg-goldenrod-darker hover:bg-goldenrod-darkest \
+                  text-goldenrod-lightest font-bold py-2 px-4 rounded ml-2"
+                onClick={this.addPledge}
+              >
+                Pledge
+              </button>
+            </div>
           </div>
         </div>
       </div>

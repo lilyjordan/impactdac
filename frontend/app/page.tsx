@@ -272,66 +272,70 @@ export class Home extends React.Component<{}, AppState> {
 
     return (
       <div>
-          <div className="m-4">
-            <h3>DACFactoryAddress: {this.DACFactoryAddress}</h3>
-            <div className="flex flex-wrap w-[80%] mx-auto bg-goldenrod-darker">
-              {contracts}
-            </div>
+        <div className="m-20 text-right">
+          <h3>{this.DACFactoryAddress && 'Connected'}</h3>
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(320px,1fr))] \
+            justify-items-center mx-auto bg-goldenrod-darker gap-8 \
+            p-8 mb-8"
+          >
+            {contracts}
           </div>
-          {this.state.showSponsorModal && (
-            <SponsorModal
-              DACFactory={this.DACFactory}
-              DACFactoryAddress={this.DACFactoryAddress}
-              provider={this.provider}
-              signer={this.signer}
-              onDACCreated={this.handleDACCreated}
-              onClickX={this.toggleSponsorModal}
-            />
-          )}
-          {this.state.activeContractModal && (
-            <ContractModal
-              contractData={this.state.contracts[this.state.activeContractModal]}
-              signer={this.signer!}
-              onPledgeAdded={this.handlePledgeAdded}
-              onClickX={this.closeContractModal}
-            />
-          )}
-          <button onClick={this.toggleSponsorModal}>
-            <div className="bg-goldenrod-darker hover:bg-goldenrod-darkest \
-              text-goldenrod-lightest font-bold py-2 px-4 rounded w-44"
-            >
-              Sponsor a Bounty
-            </div>
+          <button
+            className="bg-goldenrod-darker hover:bg-goldenrod-darkest \
+              text-goldenrod-lightest font-bold py-2 px-4 rounded w-44 \
+              ml-auto"
+            onClick={this.toggleSponsorModal}
+          >
+            Sponsor a Bounty
           </button>
-  
-          <div className="m-4">
-            <h1>Approve Payout</h1>
-            <form id="approvePayoutForm">
-                <label htmlFor="dacAddressPayout">DAC Address:</label><br />
-                <input type="text" id="dacAddressPayout" name="dacAddressPayout" /><br />
-                <label htmlFor="founder">Founder:</label><br />
-                <input type="text" id="founder" name="founder" /><br />
-                <input className="text-green-500" type="submit" value="Approve Payout" />
-            </form>
-          </div>
-  
-          <div className="m-4">
-            <h1>Refund</h1>
-            <form id="refundForm">
-                <label htmlFor="dacAddressRefund">DAC Address:</label><br />
-                <input type="text" id="dacAddressRefund" name="dacAddressRefund" /><br />
-                <input className="text-green-500" type="submit" value="Refund" />
-            </form>
-          </div>
-  
-          <div className="m-4">
-            <h1>Claim Unowed Contribution Compensation</h1>
-            <form id="claimCompForm">
-                <label htmlFor="dacAddressClaim">DAC Address:</label><br />
-                <input type="text" id="dacAddressClaim" name="dacAddressClaim" /><br />
-                <input className="text-green-500" type="submit" value="Claim Compensation" />
-            </form>
-          </div>
+        </div>
+        {this.state.showSponsorModal && (
+          <SponsorModal
+            DACFactory={this.DACFactory}
+            DACFactoryAddress={this.DACFactoryAddress}
+            provider={this.provider}
+            signer={this.signer}
+            onDACCreated={this.handleDACCreated}
+            onClose={this.toggleSponsorModal}
+          />
+        )}
+        {this.state.activeContractModal && (
+          <ContractModal
+            contractData={this.state.contracts[this.state.activeContractModal]}
+            signer={this.signer!}
+            onPledgeAdded={this.handlePledgeAdded}
+            onClose={this.closeContractModal}
+          />
+        )}
+
+        <div className="m-4">
+          <h1>Approve Payout</h1>
+          <form id="approvePayoutForm">
+              <label htmlFor="dacAddressPayout">DAC Address:</label><br />
+              <input type="text" id="dacAddressPayout" name="dacAddressPayout" /><br />
+              <label htmlFor="founder">Founder:</label><br />
+              <input type="text" id="founder" name="founder" /><br />
+              <input className="text-green-500" type="submit" value="Approve Payout" />
+          </form>
+        </div>
+
+        <div className="m-4">
+          <h1>Refund</h1>
+          <form id="refundForm">
+              <label htmlFor="dacAddressRefund">DAC Address:</label><br />
+              <input type="text" id="dacAddressRefund" name="dacAddressRefund" /><br />
+              <input className="text-green-500" type="submit" value="Refund" />
+          </form>
+        </div>
+
+        <div className="m-4">
+          <h1>Claim Unowed Contribution Compensation</h1>
+          <form id="claimCompForm">
+              <label htmlFor="dacAddressClaim">DAC Address:</label><br />
+              <input type="text" id="dacAddressClaim" name="dacAddressClaim" /><br />
+              <input className="text-green-500" type="submit" value="Claim Compensation" />
+          </form>
+        </div>
       </div>
     );
   }

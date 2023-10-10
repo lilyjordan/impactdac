@@ -17,8 +17,8 @@ export class ContractCard extends React.Component<
 
     return (
       <div
-        className="bg-goldenrod-lighter m-8 p-8 rounded-lg text-black \
-          max-w-sm h-72 shadow-lg flex flex-col justify-between"
+        className="bg-goldenrod-lighter p-8 rounded-lg text-black \
+          max-w-xs h-80 shadow-lg flex flex-col justify-between cursor-pointer"
         onClick={() => openContractModal(contractData.address)}
       >
         <div>
@@ -29,29 +29,22 @@ export class ContractCard extends React.Component<
             Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
           </div>
         </div>
-        <div className="flex justify-between text-sm">
-          <div style={{ maxWidth: '70%' }}>
-            <div className="truncate">
-              <span className="font-bold truncate">
-                {contractData.amountPledged?.toString()}
-              </span>
-              {' of '}
-              <span className="font-bold truncate">
-                {contractData.goal ? ethers.formatEther(contractData.goal) : '?'}
-              </span>
-              {' ETH by '}
-              <span className="font-bold truncate">
-                {contractData.deadline ? new Date(Number(contractData.deadline) * 1000).toLocaleDateString() : '?'}
-              </span>
-            </div>
-            <div className="truncate">
-              Sponsor <span className="font-bold truncate">{contractData.sponsor}</span>
-            </div>
+        <div className="text-sm">
+          <div className="truncate">
+            <span className="font-bold truncate">
+              {contractData.amountPledged?.toString()}
+            </span>
+            {' of '}
+            <span className="font-bold truncate">
+              {contractData.goal ? ethers.formatEther(contractData.goal) : '?'}
+            </span>
+            {' ETH by '}
+            <span className="font-bold truncate">
+              {contractData.deadline ? new Date(Number(contractData.deadline) * 1000).toLocaleDateString() : '?'}
+            </span>
           </div>
-          <div className="self-end mt-auto ">
-            <button className="bg-goldenrod-darker hover:bg-goldenrod-darkest text-goldenrod-lightest font-bold py-2 px-4 rounded">
-              Pledge
-            </button>
+          <div className="truncate">
+            Sponsor <span className="font-bold truncate">{contractData.sponsor}</span>
           </div>
         </div>
       </div>
