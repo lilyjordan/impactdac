@@ -32,7 +32,7 @@ export class ContractCard extends React.Component<
         <div className="text-sm">
           <div className="truncate">
             <span className="font-bold truncate">
-              {contractData.amountPledged?.toString()}
+              {ethers.formatEther(contractData.amountPledged?.toString())}
             </span>
             {' of '}
             <span className="font-bold truncate">

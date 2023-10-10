@@ -97,19 +97,31 @@ export class Home extends React.Component<{}, AppState> {
     });
   }
 
-  async _updateContracts() {
-    if (!this.DACFactory) {
+
+  async _updateContracts(addressToUpdate?: string) {
+    if (!this.DACFactory || !this.provider) {
       return;
     }
-    if (!this.provider) {
-      return;
-    }
+  
     let contractAddresses = await this.DACFactory.getContracts();
-    let newContracts: { [key: string]: ContractData } = {};
+    let newContracts = { ...this.state.contracts };
+    
+    // Update a particular contract if its address is provided
+    if (addressToUpdate) {
+      const c = new ethers.Contract(
+        addressToUpdate,
+        DACArtifact.abi,
+        this.signer
+      );
+      const amountPledged = await c.totalContributions();
+      if (newContracts[addressToUpdate]) {
+        newContracts[addressToUpdate].amountPledged = amountPledged;
+      }
+    }
+  
+    // Add new contracts
     for (const addr of contractAddresses) {
-      if (this.state.contracts.hasOwnProperty(addr)) {
-        newContracts[addr] = this.state.contracts[addr];
-      } else {
+      if (!newContracts.hasOwnProperty(addr)) {
         const c = new ethers.Contract(
           addr,
           DACArtifact.abi,
@@ -139,8 +151,17 @@ export class Home extends React.Component<{}, AppState> {
         }
       }
     }
-    this.setState({contracts: newContracts});
+    
+    // Remove deleted contracts
+    for (const addr in newContracts) {
+      if (!contractAddresses.includes(addr)) {
+        delete newContracts[addr];
+      }
+    }
+  
+    this.setState({ contracts: newContracts });
   }
+
 
   _resetState() {
     this.setState(this.initialState);
@@ -206,9 +227,9 @@ export class Home extends React.Component<{}, AppState> {
   }
 
 
-  handlePledgeAdded = () => {
+  handlePledgeAdded = (addr: string) => {
     this.closeContractModal();
-    this._updateContracts();
+    this._updateContracts(addr);
   }
 
 

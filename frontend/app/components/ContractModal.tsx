@@ -7,32 +7,43 @@ export class ContractModal extends React.Component<
   {
     contractData: ContractData,
     signer: ethers.Signer,
-    onPledgeAdded: () => void,
+    onPledgeAdded: (addr: string) => void,
     onClose: () => void
   }
 > {
 
   state = {
-    pledgeAmount: 0.01
+    pledgeAmount: '0.01',
+    inputFocused: false
   };
 
+
+  handleBlur = () => {
+    this.setState({ inputFocused: false });
+    if (this.state.pledgeAmount == '') {
+      this.setState({pledgeAmount: 0.01});
+    }
+  };
+
+
   handleChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const valueStr: string = event.target.value;
-    const value = Number(valueStr);
-    this.setState({pledgeAmount: value});
-  }
+    if (!/^(0|[1-9]\d*)?(\.\d*)?$/.test(event.target.value)) {
+      return;
+    }
+    this.setState({ pledgeAmount: event.target.value });
+  };
 
 
   addPledge = async () => {
     const { contractData } = this.props;
     let val;
     try {
-      val = ethers.parseEther(this.state.pledgeAmount.toString());
+      val = ethers.parseEther(this.state.pledgeAmount);
       let transaction = await contractData.contract.contribute(
         {value: val}
       );
       let receipt = await transaction.wait();
-      this.props.onPledgeAdded();
+      this.props.onPledgeAdded(this.props.contractData.address);
     } catch (error) {
       console.error(error);
     }
@@ -68,7 +79,7 @@ export class ContractModal extends React.Component<
             <div className="mb-4">
               <div className="truncate">
                 <span className="font-bold truncate">
-                  {contractData.amountPledged?.toString()}
+                  {ethers.formatEther(contractData.amountPledged?.toString())}
                 </span>
                 {' of '}
                 <span className="font-bold truncate">
@@ -86,10 +97,14 @@ export class ContractModal extends React.Component<
             <div className="self-end mt-auto flex items-center justify-center">
               <div className="mr-4">
                 <input 
-                  type="number"
+                  type="string"
                   value={this.state.pledgeAmount}
                   onChange={this.handleChange}
+                  step="any"
+                  onFocus={() => this.setState({ inputFocused: true })}
+                  onBlur={this.handleBlur}
                   className="border rounded py-1 px-2 mr-2 w-24"
+                  style={{ appearance: 'none' }}
                 />
                 <span>
                   ETH
