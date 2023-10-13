@@ -73,7 +73,6 @@ contract DAC {
         if (state == State.Funding && block.timestamp > deadline) {
             state = State.Failed;
         }
-
     }
 
     function refund() public {
