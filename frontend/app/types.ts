@@ -3,10 +3,10 @@ import { ethers } from "ethers";
 
 export type DACProperties = {
   arbitrator?: string;
-  deadline?: number;
-  goal?: number;
-  contribCompPct?: number;
-  sponsorCompPct?: number;
+  deadline?: bigint;
+  goal?: bigint;
+  contribCompPct?: bigint;
+  sponsorCompPct?: bigint;
   title?: string;
 };
 
@@ -17,7 +17,7 @@ export type ContractData = RequiredDACProperties & {
   address: string;
   sponsor: string;
   fundingState: string;
-  amountPledged: number;
+  amountPledged: bigint;
 }
 
 export type ContributeForm = {
@@ -43,7 +43,7 @@ export type AppState = {
   formApprovePayout: ApprovePayoutForm;
   formRefund: RefundForm;
   formClaimComp: ClaimCompForm;
-  selectedAddress?: string;
+  userAddress?: string;
   contracts: { [key: string] : ContractData };
   txBeingSent?: string;
   messageDuringTx?: string;
@@ -61,3 +61,7 @@ export type Network = {
   polygon_mainnet: string;
   [key: string]: string; // index signature
 }
+
+export type EnumDefinitions = {
+  State: { [key: string]: string };
+};

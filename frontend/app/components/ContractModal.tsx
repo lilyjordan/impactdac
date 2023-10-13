@@ -1,16 +1,17 @@
 import React from 'react';
 import { ethers } from "ethers";
 import { ContractData } from '../types';
+import { goalPlusSponsorComp, userIsArbitrator } from '../utils';
 
 
 export class ContractModal extends React.Component<
   {
     contractData: ContractData,
+    userAddress: string | undefined,
     signer: ethers.Signer,
     onPledgeAdded: (addr: string) => void,
     onClose: () => void
-  }
-> {
+  }> {
 
   state = {
     pledgeAmount: '0.01',
@@ -36,6 +37,7 @@ export class ContractModal extends React.Component<
 
 
   addPledge = async () => {
+    // TODO check whether userAddress is present
     const { contractData } = this.props;
     let val;
     // TODO don't allow pledge higher than the amount remaining. We probably
@@ -59,22 +61,16 @@ export class ContractModal extends React.Component<
 
 
   approvePayout = async () => {
-    const { contractData } = this.props;
-    if (this.state.grantee) {
+    const { contractData, userAddress } = this.props;
+    if (this.state.grantee && contractData.arbitrator.toLowerCase() === userAddress?.toLowerCase()) {
       // TODO validate
-      contractData.contract
+      contractData.contract.approvePayout(this.state.grantee);
     }
   }
 
 
   render() {
-    const { contractData, onClose, signer } = this.props;
-
-    const isFailed = (Date.now() > Number(contractData.deadline) * 1000) &&
-      contractData.amountPledged < contractData.goal;  // TODO adjust for sponsor fee
-    const isFullyFunded = contractData.amountPledged === contractData.goal;  // TODO same
-    // TODO also make very sure that we can't go over the goal
-    // const userIsArbitrator = contractData.arbitrator === signer.getAddress()
+    const { contractData, onClose, signer, userAddress } = this.props;
 
     return (
       <div
@@ -106,18 +102,18 @@ export class ContractModal extends React.Component<
                 </span>
                 {' of '}
                 <span className="font-bold truncate">
-                  {contractData.goal ? ethers.formatEther(contractData.goal) : '?'}
+                  {ethers.formatEther(goalPlusSponsorComp(contractData))}
                 </span>
                 {' ETH by '}
                 <span className="font-bold truncate">
-                  {contractData.deadline ? new Date(Number(contractData.deadline) * 1000).toLocaleDateString() : '?'}
+                  {new Date(Number(contractData.deadline) * 1000).toLocaleDateString()}
                 </span>
               </div>
               <div className="truncate">
                 Sponsor <span className="font-bold truncate">{contractData.sponsor}</span>
               </div>
             </div>
-            {(!isFailed && !isFullyFunded) &&
+            {contractData.fundingState === 'Funding' &&
             <div className="self-end mt-auto flex items-center justify-center">
               <div className="mr-4">
                 <input 
@@ -143,7 +139,7 @@ export class ContractModal extends React.Component<
               </button>
             </div>
             }
-            {isFullyFunded &&
+            {contractData.fundingState === 'Funded' && userIsArbitrator(contractData, userAddress) &&
               <div className="mr-4">
                 <input 
                   type="string"

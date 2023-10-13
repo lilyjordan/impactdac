@@ -5,12 +5,14 @@ import { ethers } from "ethers";
 import DACFactoryArtifact from '../artifacts/DAC.sol/DACFactory.json';
 import DACArtifact from '../artifacts/DAC.sol/DAC.json';
 import dynamic from 'next/dynamic';
-import { ContributeForm, ApprovePayoutForm, RefundForm,
-  ClaimCompForm, AppState, Network, ContractData } from './types';
+import { AppState, Network, EnumDefinitions } from './types';
 import { ContractCard } from './components/ContractCard';
 import { SponsorModal } from './components/SponsorModal';
 import { ContractModal } from './components/ContractModal';
-import Link from 'next/link';
+import rawEnums from '../public/enum_definitions.json';
+
+
+const Enums: EnumDefinitions = rawEnums;
 
 
 const NETWORK_IDS: Network = {
@@ -134,7 +136,11 @@ export class Home extends React.Component<{}, AppState> {
         const contribCompPct = await c.contribCompPct();
         const sponsorCompPct = await c.sponsorCompPct();
         const title = await c.title();
-        const fundingState = await c.state();
+        let fundingState = await c.state();
+        if (Enums['State'][fundingState] === 'Funded') {
+          await c.checkFailure();
+          fundingState = await c.state();
+        }
         const amountPledged = await c.totalContributions();
         newContracts[addr] = {
           contract: c,
@@ -323,22 +329,12 @@ export class Home extends React.Component<{}, AppState> {
         {this.state.activeContractModal && (
           <ContractModal
             contractData={this.state.contracts[this.state.activeContractModal]}
+            userAddress={this.state.userAddress}
             signer={this.signer!}
             onPledgeAdded={this.handlePledgeAdded}
             onClose={this.closeContractModal}
           />
         )}
-
-        <div className="m-4">
-          <h1>Approve Payout</h1>
-          <form id="approvePayoutForm">
-              <label htmlFor="dacAddressPayout">DAC Address:</label><br />
-              <input type="text" id="dacAddressPayout" name="dacAddressPayout" /><br />
-              <label htmlFor="founder">Founder:</label><br />
-              <input type="text" id="founder" name="founder" /><br />
-              <input className="text-green-500" type="submit" value="Approve Payout" />
-          </form>
-        </div>
 
         <div className="m-4">
           <h1>Refund</h1>

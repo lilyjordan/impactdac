@@ -12,9 +12,12 @@ export class ContractCard extends React.Component<
   }
 > {
 
+  goalPlusSponsorComp = this.props.contractData.goal * (BigInt(100) +
+    this.props.contractData.sponsorCompPct) / BigInt(100);
+
   render() {
     const { contractData, openContractModal } = this.props;
-    const isExpired = Date.now() > Number(contractData.deadline) * 1000;
+    const isExpired = contractData.fundingState in ['Failed', 'Approved'];
 
     return (
       <div
@@ -41,7 +44,7 @@ export class ContractCard extends React.Component<
             </span>
             {' of '}
             <span className="font-bold truncate">
-              {ethers.formatEther(contractData.goal)}
+              {ethers.formatEther(this.goalPlusSponsorComp)}
             </span>
             {' ETH by '}
             <span className="font-bold truncate">
