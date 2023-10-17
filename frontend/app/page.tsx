@@ -73,11 +73,12 @@ export class Home extends React.Component<{}, AppState> {
 
   state = this.initialState;
 
-  constructor(props: {}) {
-    super(props);
+
+  componentDidMount() {
     this._initializeEthers()
     .then(this._connectWallet);
   }
+
 
   async _initializeEthers() {
     this.provider = new ethers.BrowserProvider(window.ethereum);
@@ -107,6 +108,7 @@ export class Home extends React.Component<{}, AppState> {
     }
   
     let contractAddresses = await this.DACFactory.getContracts();
+    console.log('contractAddresses:', contractAddresses);
     let newContracts = { ...this.state.contracts };    
     
     // Update a particular contract if its address is provided
@@ -140,6 +142,9 @@ export class Home extends React.Component<{}, AppState> {
 
         const description = await getDescription(addr);  // TODO handle a db error
 
+        // TODO mystery error?
+        // maybe when user isn't logged in? but connection looks ok
+        // happens on second load, it looks like
         const userContribution = await c.contributions(
           this.state.userAddress);
 
@@ -175,12 +180,14 @@ export class Home extends React.Component<{}, AppState> {
     // See if any contracts have expired
     for (const addr in newContracts) {
       const contractData = newContracts[addr];
-      console.log(contractData.fundingState);
+      // We could do this whole check by making `checkFailure`
+      // on the contract itself public and calling that,
+      // but it costs gas, so I think this is the least
+      // annoying way around that for now.
       if (contractData.fundingState === 'Funding') {
-        await contractData.contract.checkFailure();
-        // TODO wait does this next line cost gas to check??
-        contractData.fundingState = await contractData.contract.state();
-        alert(contractData.fundingState);
+        if (Date.now() > contractData.deadline * BigInt(1000)) {
+          contractData.fundingState = 'Failed';
+        }
       }
     }
   

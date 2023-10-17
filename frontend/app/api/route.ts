@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import axios from 'axios';
 import sqlite3 from 'sqlite3';
 import { open, Database } from 'sqlite';
+// TODO write tests for all these functions
 
 
 interface DescriptionData {
@@ -10,7 +11,6 @@ interface DescriptionData {
 }
 
 
-// TODO use this in POST
 function validateAddress(address: string | null): string {
   if (!address) {
     throw new Error('Null address');
@@ -35,7 +35,6 @@ export async function GET(req: NextRequest) {
   });
 
   const address: string | null = req.nextUrl.searchParams.get('address');
-  console.log('\naddress:', address, '\n');
 
   let validatedAddress: string;
   try {
@@ -49,15 +48,11 @@ export async function GET(req: NextRequest) {
     const result = await statement.get([validatedAddress]);
     await statement.finalize();
   if (result) {
-    console.log('\ndescription:', result.description, '\n')
     return NextResponse.json({ description: result.description }, { status: 200 });
   } else {
-    console.log('\nnot found\n');
     return NextResponse.json({ error: 'Address not found' }, { status: 404 });
   }
   } catch (err) {
-    console.log('\nsome error\n');
-    console.log('\n', err, '\n');
     return NextResponse.json({ error: 'Database operation failed' }, { status: 500 });
   } finally {
     await db.close();
@@ -73,12 +68,19 @@ export async function POST(req: NextRequest) {
   });
 
   const data: DescriptionData = await req.json();
+
+  let validatedAddress: string;
+  try {
+    validatedAddress = validateAddress(data.address);
+  } catch (err) {
+    return NextResponse.json({ error: 'Invalid address' }, { status: 400 });
+  }
   
   try {
-    await db.run('INSERT INTO contracts (address, description) VALUES (?, ?)', [data.address, data.description]);
+    await db.run('INSERT INTO contracts (address, description) VALUES (?, ?)',
+      [validatedAddress, data.description]);
     return NextResponse.json({ success: true }, { status: 200 });
   } catch (err) {
-    console.log('\n', err, '\n');
     return NextResponse.json({ error: 'Database operation failed' }, { status: 500 } );
   }
 }

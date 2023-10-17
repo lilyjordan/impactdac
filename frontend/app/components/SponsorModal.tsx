@@ -99,30 +99,38 @@ export class SponsorModal extends React.Component<
     );
     this.setState({waiting: true});
 
-    let receipt = await transaction.wait();
+    let receipt: ethers.ContractTransactionReceipt = await transaction.wait();
 
-    // This extra nonce stuff is in here to check what address the contract got created to
-    // However I'm not sure we need it anymore, since now the factory contract keeps
-    // track of all the DAC contracts it's deployed
-    const nonce = await this.props.provider!.getTransactionCount(this.props.DACFactoryAddress!, 'latest');
-    const dacAddress = ethers.getCreateAddress({ from: this.props.DACFactoryAddress!, nonce: nonce });
-    let dac = new ethers.Contract(dacAddress, DACArtifact.abi, this.props.signer);
+    let logs = receipt.logs;
+    let newDACAddress: string;
+    let topic = ethers.id('NewDAC(address)');
+    let deployLog: ethers.EventLog | ethers.Log | undefined =
+      logs.find((log: ethers.Log) => log.topics[0] === topic);
 
-    // fetch('/api/insertContract', {
-    //   method: 'POST',
-    //   headers: {
-    //     'Content-Type': 'application/json',
-    //   },
-    //   body: JSON.stringify({
-    //     id: 1,
-    //     address: dacAddress,
-    //     description: this.state.description
-    //   })
-    // })
-    // .then(response => response.json())
-    // .then(data => {
-    //   // Handle success or failure
-    // });
+    if (deployLog) {
+        // zero-padded as part of a 32 byte word, so we have to parse it
+        const paddedAddress = deployLog.topics[1];
+        console.log('paddedAddress:', paddedAddress);
+        newDACAddress = '0x' + paddedAddress.substring(paddedAddress.length - 40);
+        console.log('Contract deployed at address:', newDACAddress);
+    } else {
+        throw new Error('Deployment event log not found');
+    }
+
+    fetch('/api', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        address: newDACAddress,
+        description: this.state.description
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      console.log('result:', data);
+    });
 
     this.props.onDACCreated();
     this.setState({waiting: false});
@@ -143,7 +151,7 @@ export class SponsorModal extends React.Component<
     .then(response => response.json())
     .then(data => {
       // Handle success or failure
-      console.log('result:', data);
+      console.log('testPost result:', data);
     });
   }
 
@@ -167,7 +175,6 @@ export class SponsorModal extends React.Component<
             <button onClick={this.testPost}>Test post</button>
             <h1>Sponsor a bounty</h1>
             <form id="DACProperties" onSubmit={this.handleSubmit}>
-            <label htmlFor="deadline">Deadline:</label><br />
             <label htmlFor="arbitrator">Arbitrator:</label><br />
               <input
                 type="text"
@@ -177,6 +184,7 @@ export class SponsorModal extends React.Component<
                 onChange={this.handleChange}
                 />
               <br />
+              <label htmlFor="deadline">Deadline:</label><br />
               <input
                 type="number"
                 id="deadline"

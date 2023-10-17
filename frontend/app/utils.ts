@@ -25,8 +25,8 @@ export async function getDescription(addr: string) {
     });
 
     if (!response.ok) {
-      console.log('addr:', addr);
-      console.log('response:', response);
+      console.log('getDescription called with addr:', addr);
+      console.log('getDescription response:', response);
       throw new Error(`Network response was not ok: ${response.statusText}`);
     }
 
