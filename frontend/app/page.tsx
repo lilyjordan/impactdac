@@ -10,6 +10,7 @@ import { ContractCard } from './components/ContractCard';
 import { SponsorModal } from './components/SponsorModal';
 import { ContractModal } from './components/ContractModal';
 import rawEnums from '../public/enum_definitions.json';
+import { getDescription } from './utils';
 
 
 const Enums: EnumDefinitions = rawEnums;
@@ -136,6 +137,9 @@ export class Home extends React.Component<{}, AppState> {
         const contribCompPct = await c.contribCompPct();
         const sponsorCompPct = await c.sponsorCompPct();
         const title = await c.title();
+
+        const description = await getDescription(addr);  // TODO handle a db error
+
         const userContribution = await c.contributions(
           this.state.userAddress);
 
@@ -153,6 +157,7 @@ export class Home extends React.Component<{}, AppState> {
           contribCompPct: contribCompPct,
           sponsorCompPct: sponsorCompPct,
           title: title,
+          description: description,
           fundingState: fundingState,
           amountPledged: amountPledged,
           userContribution: userContribution

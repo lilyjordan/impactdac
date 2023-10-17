@@ -13,3 +13,34 @@ export function userIsArbitrator(contract: ContractData,
   }
   return false;
 }
+
+
+export async function getDescription(addr: string) {
+  try {
+    const response = await fetch(`/api?address=${encodeURIComponent(addr)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      console.log('addr:', addr);
+      console.log('response:', response);
+      throw new Error(`Network response was not ok: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    if (data.description) {
+      return data.description;
+    } else {
+      throw new Error('Description not found in the response');
+    }
+  } catch (error) {
+    if (error instanceof Error) {
+      throw new Error(`Error fetching description: ${error.message}`);
+    } else {
+      throw new Error('An unknown error occurred');
+    }
+  }
+}
