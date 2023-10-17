@@ -17,7 +17,7 @@ export class ContractCard extends React.Component<
 
   render() {
     const { contractData, openContractModal } = this.props;
-    const isExpired = contractData.fundingState in ['Failed', 'Approved'];
+    const isExpired = ['Failed', 'Approved'].includes(contractData.fundingState);
 
     return (
       <div
