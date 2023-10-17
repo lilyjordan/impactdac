@@ -25,11 +25,12 @@ export class SponsorModal extends React.Component<
       // sponsorCompPct: undefined,
       // title: undefined,
       arbitrator: '0xE57bFE9F44b819898F47BF37E5AF72a0783e1141',
-      deadline: 1698669795,
-      goal: 10,
-      contribCompPct: 5,
-      sponsorCompPct: 10,
+      deadline: BigInt(1698669795),
+      goal: BigInt(1),
+      contribCompPct: BigInt(5),
+      sponsorCompPct: BigInt(10),
       title: undefined,
+      description: undefined,
       waiting: false
   };
 
@@ -38,10 +39,11 @@ export class SponsorModal extends React.Component<
 
   handleChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const name = event.target.name as keyof DACProperties;
-    let value: string | number | null = event.target.value;
-  
-    if (typeof this.state[name] === 'number' || this.state[name] === null) {
-      value = Number(value);
+    let value: string | bigint | null = event.target.value;
+
+    const bigIntFields = ['deadline', 'goal', 'contribCompPct', 'sponsorCompPct'];
+    if (bigIntFields.includes(name)) {
+      value = BigInt(value);
     }
 
     this.setState({ ...this.state, [name]: value });
@@ -56,11 +58,12 @@ export class SponsorModal extends React.Component<
   parseDACProperties = (form: RequiredDACProperties): RequiredDACProperties => {
     return {
       arbitrator: form.arbitrator,
-      deadline: Number(form.deadline),
-      goal: Number(form.goal),
-      contribCompPct: Number(form.contribCompPct),
-      sponsorCompPct: Number(form.sponsorCompPct),
-      title: form.title
+      deadline: BigInt(form.deadline),
+      goal: BigInt(form.goal),
+      contribCompPct: BigInt(form.contribCompPct),
+      sponsorCompPct: BigInt(form.sponsorCompPct),
+      title: form.title,
+      description: form.description
     };
   };
 
@@ -84,7 +87,7 @@ export class SponsorModal extends React.Component<
     if (!this.props.DACFactory) {
       throw new Error('DACFactory is not initialized');
     }
-    const val = ethers.parseEther((form.goal * form.contribCompPct / 100).toString());
+    const val = ethers.parseEther(form.goal.toString()) * form.contribCompPct / BigInt(100);
     let transaction = await this.props.DACFactory.createDAC(
         form.arbitrator,
         form.deadline,
@@ -95,6 +98,7 @@ export class SponsorModal extends React.Component<
         {value: val}
     );
     this.setState({waiting: true});
+
     let receipt = await transaction.wait();
 
     // This extra nonce stuff is in here to check what address the contract got created to
@@ -103,10 +107,44 @@ export class SponsorModal extends React.Component<
     const nonce = await this.props.provider!.getTransactionCount(this.props.DACFactoryAddress!, 'latest');
     const dacAddress = ethers.getCreateAddress({ from: this.props.DACFactoryAddress!, nonce: nonce });
     let dac = new ethers.Contract(dacAddress, DACArtifact.abi, this.props.signer);
+
+    // fetch('/api/insertContract', {
+    //   method: 'POST',
+    //   headers: {
+    //     'Content-Type': 'application/json',
+    //   },
+    //   body: JSON.stringify({
+    //     id: 1,
+    //     address: dacAddress,
+    //     description: this.state.description
+    //   })
+    // })
+    // .then(response => response.json())
+    // .then(data => {
+    //   // Handle success or failure
+    // });
+
     this.props.onDACCreated();
     this.setState({waiting: false});
-    // // return dac;
-    // return 1;
+  }
+
+
+  testPost() {
+    fetch('/api', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        address: '0xE57bFE9F44b819898F47BF37E5AF72a0783e1142',
+        description: 'another test description'
+      })
+    })
+    .then(response => response.json())
+    .then(data => {
+      // Handle success or failure
+      console.log('result:', data);
+    });
   }
 
 
@@ -126,20 +164,76 @@ export class SponsorModal extends React.Component<
             cursor-auto"
         >
           <div className='m-4'>
+            <button onClick={this.testPost}>Test post</button>
             <h1>Sponsor a bounty</h1>
             <form id="DACProperties" onSubmit={this.handleSubmit}>
-              <label htmlFor="arbitrator">Arbitrator:</label><br />
-              <input type="text" id="arbitrator" value={this.state.arbitrator} name="arbitrator" onChange={this.handleChange}/><br />
-              <label htmlFor="deadline">Deadline:</label><br />
-              <input type="number" id="deadline" value={this.state.deadline} name="deadline" onChange={this.handleChange}/><br />
+            <label htmlFor="deadline">Deadline:</label><br />
+            <label htmlFor="arbitrator">Arbitrator:</label><br />
+              <input
+                type="text"
+                id="arbitrator"
+                value={this.state.arbitrator}
+                name="arbitrator"
+                onChange={this.handleChange}
+                />
+              <br />
+              <input
+                type="number"
+                id="deadline"
+                // TODO I think the real problem is with the underlying types,
+                // probably DACProperties should be renamed to something that
+                // makes it more explicitly a form input and everything on it
+                // should be a string? idk?
+                value={this.state.deadline ? this.state.deadline.toString() : ''} 
+                name="deadline"
+                onChange={this.handleChange}
+                />
+              <br />
               <label htmlFor="goal">Goal:</label><br />
-              <input type="number" id="goal" value={this.state.goal} name="goal" onChange={this.handleChange}/><br />
+              <input
+                type="number"
+                id="goal"
+                value={this.state.goal ? this.state.goal.toString() : ''} 
+                name="goal"
+                onChange={this.handleChange}
+                />
+              <br />
               <label htmlFor="contribCompPct">Contributor Compensation Percent:</label><br />
-              <input type="number" id="contribCompPct" value={this.state.contribCompPct} name="contribCompPct" onChange={this.handleChange}/><br />
+              <input
+                type="number"
+                id="contribCompPct"
+                value={this.state.contribCompPct ? this.state.contribCompPct.toString() : ''} 
+                name="contribCompPct"
+                onChange={this.handleChange}
+                />
+              <br />
               <label htmlFor="sponsorCompPct">Sponsor Compensation Percent:</label><br />
-              <input type="number" id="sponsorCompPct" value={this.state.sponsorCompPct} name="sponsorCompPct" onChange={this.handleChange}/><br />
+              <input
+                type="number"
+                id="sponsorCompPct"
+                value={this.state.contribCompPct ? this.state.contribCompPct.toString() : ''} 
+                name="sponsorCompPct"
+                onChange={this.handleChange}
+                />
+              <br />
               <label htmlFor="title">Title:</label><br />
-              <input type="text" id="title" value={this.state.title} name="title" onChange={this.handleChange}/><br />
+              <input
+                type="text"
+                id="title"
+                value={this.state.title}
+                name="title"
+                onChange={this.handleChange}
+              />
+              <br />
+              <label htmlFor="description">Description:</label><br />
+              <input
+                type="text"
+                id="description"
+                value={this.state.description}
+                name="description"
+                onChange={this.handleChange}
+              />
+              <br />
               {this.state.waiting ?
                 <div className="mt-4">Waiting for transaction...</div> :
                 <input

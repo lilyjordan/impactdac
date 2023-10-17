@@ -106,7 +106,7 @@ export class Home extends React.Component<{}, AppState> {
     }
   
     let contractAddresses = await this.DACFactory.getContracts();
-    let newContracts = { ...this.state.contracts };
+    let newContracts = { ...this.state.contracts };    
     
     // Update a particular contract if its address is provided
     if (addressToUpdate) {
@@ -136,11 +136,12 @@ export class Home extends React.Component<{}, AppState> {
         const contribCompPct = await c.contribCompPct();
         const sponsorCompPct = await c.sponsorCompPct();
         const title = await c.title();
-        let fundingState = await c.state();
-        if (Enums['State'][fundingState] === 'Funded') {
-          await c.checkFailure();
-          fundingState = await c.state();
-        }
+        const userContribution = await c.contributions(
+          this.state.userAddress);
+
+        let rawFundingState = await c.state();
+        const fundingState = Enums['State'][rawFundingState];
+
         const amountPledged = await c.totalContributions();
         newContracts[addr] = {
           contract: c,
@@ -153,7 +154,8 @@ export class Home extends React.Component<{}, AppState> {
           sponsorCompPct: sponsorCompPct,
           title: title,
           fundingState: fundingState,
-          amountPledged: amountPledged
+          amountPledged: amountPledged,
+          userContribution: userContribution
         }
       }
     }
@@ -162,6 +164,18 @@ export class Home extends React.Component<{}, AppState> {
     for (const addr in newContracts) {
       if (!contractAddresses.includes(addr)) {
         delete newContracts[addr];
+      }
+    }
+
+    // See if any contracts have expired
+    for (const addr in newContracts) {
+      const contractData = newContracts[addr];
+      console.log(contractData.fundingState);
+      if (contractData.fundingState === 'Funding') {
+        await contractData.contract.checkFailure();
+        // TODO wait does this next line cost gas to check??
+        contractData.fundingState = await contractData.contract.state();
+        alert(contractData.fundingState);
       }
     }
   

@@ -8,6 +8,7 @@ export type DACProperties = {
   contribCompPct?: bigint;
   sponsorCompPct?: bigint;
   title?: string;
+  description?: string;
 };
 
 export type RequiredDACProperties = Required<DACProperties>;
@@ -18,6 +19,7 @@ export type ContractData = RequiredDACProperties & {
   sponsor: string;
   fundingState: string;
   amountPledged: bigint;
+  userContribution: bigint;
 }
 
 export type ContributeForm = {

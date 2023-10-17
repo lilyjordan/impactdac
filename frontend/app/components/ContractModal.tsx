@@ -13,6 +13,7 @@ export class ContractModal extends React.Component<
     onClose: () => void
   }> {
 
+
   state = {
     pledgeAmount: '0.01',
     grantee: undefined,
@@ -62,9 +63,17 @@ export class ContractModal extends React.Component<
 
   approvePayout = async () => {
     const { contractData, userAddress } = this.props;
-    if (this.state.grantee && contractData.arbitrator.toLowerCase() === userAddress?.toLowerCase()) {
+    if (this.state.grantee && userIsArbitrator(contractData, userAddress)) {
       // TODO validate
       contractData.contract.approvePayout(this.state.grantee);
+    }
+  }
+
+
+  claimRefund = async () => {
+    const { contractData, userAddress } = this.props;
+    if (contractData.userContribution > 0) {
+      contractData.contract.refund();
     }
   }
 
@@ -117,7 +126,7 @@ export class ContractModal extends React.Component<
             <div className="self-end mt-auto flex items-center justify-center">
               <div className="mr-4">
                 <input 
-                  type="string"
+                  type="text"
                   value={this.state.pledgeAmount}
                   onChange={this.handlePledgeAmountChange}
                   step="any"
@@ -157,6 +166,18 @@ export class ContractModal extends React.Component<
                   onClick={this.approvePayout}
                 >
                   Approve payout
+                </button>
+              </div>
+            }
+            {contractData.fundingState === 'Failed' && contractData.userContribution > 0 &&
+              <div className="mr-4">
+                <button
+                  className="bg-goldenrod-darker hover:bg-goldenrod-darkest \
+                    text-goldenrod-lightest font-bold py-2 px-4 rounded ml-2"
+                  onClick={this.claimRefund}
+                >
+                  Refund your {ethers.formatEther(
+                    contractData.userContribution.toString())} ETH pledge
                 </button>
               </div>
             }
